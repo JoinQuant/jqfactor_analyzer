@@ -79,7 +79,7 @@ far.create_full_tear_sheet(
 
 结果展示：
 
-![2](https://image.joinquant.com/639f56bd353409e10d46f211e6a47023)
+![2](https://image.joinquant.com/88e0de9b43424e3b7b1ab1fe48514625)
 
 ## **获取聚宽因子库数据的方法**
 

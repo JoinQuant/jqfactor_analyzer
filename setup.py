@@ -31,7 +31,7 @@ def get_long_description():
 
     long_desc = long_desc.replace(
         'docs/API文档.md',
-        'https://github.com/JoinQuant/jqfactor_analyzer/docs/API文档.md'
+        'https://github.com/JoinQuant/jqfactor_analyzer/blob/master/docs/API%E6%96%87%E6%A1%A3.md'
     )
 
     return long_desc
