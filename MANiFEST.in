@@ -1,0 +1,2 @@
+include *.txt
+include jqfactor_analyzer/sample_data/*.csv

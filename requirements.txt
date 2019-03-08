@@ -1,0 +1,11 @@
+six
+fastcache>=1.0.2
+SQLAlchemy>=1.2.8
+cached_property>=1.5.1
+statsmodels
+scipy
+numpy>=1.9.2
+pandas>=0.16.2
+matplotlib
+seaborn
+jqdatasdk
