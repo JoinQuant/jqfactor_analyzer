@@ -2,7 +2,6 @@
 
 
 import sys
-import os
 import subprocess
 from functools import wraps
 
@@ -85,12 +84,7 @@ class PlotConfig(object):
 
 
 def get_chinese_font():
-    if sys.platform.startswith('win'):
-        if os.path.exists('c:\\windows\\fonts\\simhei.ttf'):
-            return 'simhei'  # 微软黑体
-        else:
-            return None
-    elif sys.platform.startswith('linux'):
+    if sys.platform.startswith('linux'):
         cmd = 'fc-list :lang=zh -f "%{family}\n"'
         output = subprocess.check_output(cmd, shell=True)
         if isinstance(output, bytes):
@@ -98,7 +92,9 @@ def get_chinese_font():
         zh_fonts = [
             f.split(',', 1)[0] for f in output.split('\n') if f.split(',', 1)[0]
         ]
-        return zh_fonts[0] if zh_fonts else None
+        return zh_fonts
+
+    return []
 
 
 def _use_chinese(use=None):
@@ -115,14 +111,19 @@ def _use_chinese(use=None):
 
 
 def _set_chinese_fonts():
-    chinese_font = get_chinese_font()
-    if chinese_font:
-        # 设置中文字体
-        mpl.rc("font", **{"sans-serif": [chinese_font], "family": "sans-serif"})
-        # 防止负号乱码
-        mpl.rcParams["axes.unicode_minus"] = False
-    else:
-        _use_chinese(False)
+    default_chinese_font = ['SimHei', 'FangSong', 'STXihei', 'Hiragino Sans GB',
+                            'Heiti SC', 'WenQuanYi Micro Hei']
+    chinese_font = default_chinese_font + get_chinese_font()
+    # 设置中文字体
+    mpl.rc(
+        "font", **{
+            # seaborn 需要设置 sans-serif
+            "sans-serif": chinese_font,
+            "family": ','.join(chinese_font) + ',sans-serif'
+        }
+    )
+    # 防止负号乱码
+    mpl.rcParams["axes.unicode_minus"] = False
 
 
 def _set_default_fonts():

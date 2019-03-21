@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# coding:utf-8
+# -*- coding: utf-8 -*-
 
 from __future__ import print_function
 
@@ -27,14 +27,14 @@ def get_version():
 
 def get_long_description():
     with open(path_join(path_dirname(__file__), 'README.md'), 'rb') as fp:
-        long_desc = fp.read().decode('utf-8')
+        long_desc = fp.read()
 
     long_desc = long_desc.replace(
-        'docs/API文档.md',
-        'https://github.com/JoinQuant/jqfactor_analyzer/blob/master/docs/API%E6%96%87%E6%A1%A3.md'
+        u'docs/API文档.md'.encode('utf-8'),
+        u'https://github.com/JoinQuant/jqfactor_analyzer/blob/master/docs/API%E6%96%87%E6%A1%A3.md'.encode('utf-8'),
     )
 
-    return long_desc
+    return long_desc.decode('utf-8')
 
 
 setup_args = dict(
