@@ -14,10 +14,9 @@ import seaborn as sns
 
 from .compat import rolling_mean
 from .plot_utils import (
-    print_table, customize,
-    ICTS, ICHIST, ICQQ, QRETURNBAR, QRETURNVIOLIN, QRETURNTS, ICGROUP,
-    AUTOCORR, TBTURNOVER, ICHEATMAP, CUMRET, CUMRETQ, AVGCUMRET, EVENTSDIST,
-    MISSIINGEVENTSDIST
+    print_table, customize, ICTS, ICHIST, ICQQ, QRETURNBAR, QRETURNVIOLIN,
+    QRETURNTS, ICGROUP, AUTOCORR, TBTURNOVER, ICHEATMAP, CUMRET, TDCUMRET,
+    CUMRETQ, AVGCUMRET, EVENTSDIST, MISSIINGEVENTSDIST
 )
 from .performance import cumulative_returns
 from .utils import (ignore_warning, convert_to_forward_returns_columns)
@@ -543,6 +542,25 @@ def plot_cumulative_returns(factor_returns, period=1, overlap=True, ax=None):
     ax.set(
         ylabel=CUMRET.get("YLABEL"),
         title=CUMRET.get("TITLE").format(period),
+        xlabel=""
+    )
+
+    ax.axhline(1.0, linestyle='-', color='black', lw=1)
+
+    return ax
+
+
+@customize
+def plot_top_down_cumulative_returns(factor_returns, period=1, ax=None):
+
+    if ax is None:
+        f, ax = plt.subplots(1, 1, figsize=(18, 6))
+
+    factor_returns.plot(ax=ax, lw=3, color='forestgreen', alpha=0.6)
+
+    ax.set(
+        ylabel=TDCUMRET.get("YLABEL"),
+        title=TDCUMRET.get("TITLE").format(period),
         xlabel=""
     )
 

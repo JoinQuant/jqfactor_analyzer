@@ -209,6 +209,7 @@ class FactorAnalyzer(object):
         plot_top_bottom_quantile_turnover: 画最高最低分位换手率图
         plot_monthly_ic_heatmap: 画月度信息比率(IC)图
         plot_cumulative_returns: 画按因子值加权组合每日累积收益图
+        plot_top_down_cumulative_returns: 画做多最大分位数做空最小分位数组合每日累积收益图
         plot_cumulative_returns_by_quantile: 画各分位数每日累积收益图
         plot_quantile_average_cumulative_return: 因子预测能力平均累计收益图
         plot_events_distribution: 画有效因子数量统计图
@@ -1163,6 +1164,34 @@ class FactorAnalyzer(object):
                     period=p
                 )
 
+    def plot_top_down_cumulative_returns(self, period=None, demeaned=False, group_adjust=False):
+        """画做多最大分位数做空最小分位数组合每日累积收益图
+
+        period: 指定调仓周期
+        demeaned:
+        详见 calc_mean_return_by_quantile 中 demeaned 参数
+        - True: 使用超额收益计算累积收益 (基准收益被认为是每日所有股票收益按照weight列中权重加权的均值)
+        - False: 不使用超额收益
+        group_adjust:
+        详见 calc_mean_return_by_quantile 中 group_adjust 参数
+        - True: 使用行业中性化后的收益计算累积收益
+                (行业收益被认为是每日各个行业股票收益按照weight列中权重加权的均值)
+        - False: 不使用行业中性化后的收益
+        """
+        if period is None:
+            period = self._periods
+        if not isinstance(period, Iterable):
+            period = (period, )
+        period = tuple(period)
+        for p in period:
+            if p in self._periods:
+                factor_return = self.calc_top_down_cumulative_returns(
+                    period=p, demeaned=demeaned, group_adjust=group_adjust,
+                )
+                pl.plot_top_down_cumulative_returns(
+                    factor_return, period=p
+                )
+
     def plot_cumulative_returns_by_quantile(self, period=None, demeaned=False,
                                             group_adjust=False):
         """画各分位数每日累积收益图
@@ -1281,6 +1310,10 @@ class FactorAnalyzer(object):
         self.plot_cumulative_returns_by_quantile(period=None,
                                                  demeaned=demeaned,
                                                  group_adjust=group_adjust)
+        self.plot_top_down_cumulative_returns(period=None,
+                                              demeaned=demeaned,
+                                              group_adjust=group_adjust)
+        pl.plt.show()
         self.plot_mean_quantile_returns_spread_time_series(
             demeaned=demeaned, group_adjust=group_adjust
         )
@@ -1394,6 +1427,10 @@ class FactorAnalyzer(object):
                                        group_adjust=group_adjust)
         pl.plt.show()
         self.plot_cumulative_returns(period=None, demeaned=demeaned, group_adjust=group_adjust)
+        pl.plt.show()
+        self.plot_top_down_cumulative_returns(period=None,
+                                              demeaned=demeaned,
+                                              group_adjust=group_adjust)
         pl.plt.show()
         self.plot_cumulative_returns_by_quantile(period=None,
                                                  demeaned=demeaned,

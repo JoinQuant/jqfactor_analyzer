@@ -274,6 +274,17 @@ class CUMRET(_PlotLabels):
 CUMRET = CUMRET()
 
 
+class TDCUMRET(_PlotLabels):
+    YLABEL_CN = "累积收益"
+    YLABEL_EN = "Cumulative Returns"
+    TITLE_CN = "做多最大分位做空最小分位组合累积收益 ({} 天平均)"
+    TITLE_EN = """Long Top/Short Bottom Factor Portfolio Cumulative Return
+                  ({} Fwd Period)"""
+
+
+TDCUMRET = TDCUMRET()
+
+
 class CUMRETQ(_PlotLabels):
     YLABEL_CN = "累积收益(对数轴)"
     YLABEL_EN = "Log Cumulative Returns"
