@@ -592,10 +592,10 @@ def plot_cumulative_returns_by_quantile(
         ylabel=CUMRETQ.get("YLABEL"),
         title=CUMRETQ.get("TITLE").format(period),
         xlabel='',
-        yscale='symlog',
-        yticks=np.linspace(ymin, ymax, 5),
         ylim=(ymin, ymax)
     )
+    ax.set_yscale('symlog', linthreshy=1)
+    ax.set_yticks(np.linspace(ymin, ymax, 8))
     ax.yaxis.set_major_formatter(ScalarFormatter())
     ax.axhline(1.0, linestyle='-', color='black', lw=1)
 
