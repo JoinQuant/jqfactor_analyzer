@@ -295,6 +295,7 @@ def get_clean_factor(factor,
 
     merged_data['factor_quantile'] = quantile_data
     merged_data = merged_data.dropna()
+    merged_data['factor_quantile'] = merged_data['factor_quantile'].astype(int)
 
     if 'weights' in merged_data.columns:
         merged_data['weights'] = merged_data.set_index(

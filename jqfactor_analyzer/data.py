@@ -5,6 +5,7 @@ from functools import partial
 
 import numpy as np
 import pandas as pd
+from fastcache import lru_cache
 
 from .when import date2str
 
@@ -151,6 +152,15 @@ class DataApi(object):
             raise NotImplementedError('api not specified')
         return self._api
 
+    @lru_cache(2)
+    def _get_trade_days(self, start_date=None, end_date=None):
+        if start_date is not None:
+            start_date = date2str(start_date)
+        if end_date is not None:
+            end_date = date2str(end_date)
+        return list(self.api.get_trade_days(start_date=start_date,
+                                            end_date=end_date))
+
     def _get_price(self, securities, start_date=None, end_date=None, count=None,
                    fields=None, skip_paused=False, fq='post'):
         start_date = date2str(start_date) if start_date is not None else None
@@ -174,7 +184,7 @@ class DataApi(object):
     def get_prices(self, securities, start_date=None, end_date=None,
                    period=None):
         if period is not None:
-            trade_days = self.api.get_trade_days(start_date=date2str(end_date))
+            trade_days = self._get_trade_days(start_date=end_date)
             if len(trade_days):
                 end_date = trade_days[:period + 1][-1]
         p = self._get_price(
@@ -187,10 +197,17 @@ class DataApi(object):
 
     def _get_industry(self, securities, start_date, end_date,
                       industry='jq_l1'):
-        industries = self.api.get_industry(securities, date=date2str(end_date))
-        return {s: industries.get(s).get(industry, dict()).get('industry_name',
-                                                               'NA')
-                for s in securities}
+        trade_days = self._get_trade_days(start_date, end_date)
+        industries = map(partial(self.api.get_industry, securities), trade_days)
+
+        industries = {
+            d: {
+                s: ind.get(s).get(industry, dict()).get('industry_name', 'NA')
+                for s in securities
+            }
+            for d, ind in zip(trade_days, industries)
+        }
+        return pd.DataFrame(industries).T.sort_index()
 
     def get_groupby(self, securities, start_date, end_date):
         return self._get_industry(securities=securities,
@@ -198,7 +215,7 @@ class DataApi(object):
                                   industry=self.industry)
 
     def _get_market_cap(self, securities, start_date, end_date, ln=False):
-        trade_days = self.api.get_trade_days(start_date, end_date)
+        trade_days = self._get_trade_days(start_date, end_date)
 
         query = self.api.query
         valuation = self.api.valuation
@@ -227,7 +244,7 @@ class DataApi(object):
 
     def _get_circulating_market_cap(self, securities, start_date, end_date,
                                     ln=False):
-        trade_days = self.api.get_trade_days(start_date, end_date)
+        trade_days = self._get_trade_days(start_date, end_date)
 
         query = self.api.query
         valuation = self.api.valuation
