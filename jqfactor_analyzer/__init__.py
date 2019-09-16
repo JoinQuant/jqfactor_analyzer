@@ -14,6 +14,7 @@ def analyze_factor(
     输入:
         factor: pandas.DataFrame: 因子值, columns 为股票代码 (如 '000001.XSHE'),
                                           index 为 日期的 DatetimeIndex
+                或 pandas.Series: 因子值, index 为日期和股票代码的 MultiIndex
         industry: 行业分类, 默认为 'jq_l1'
             - 'jq_l1': 聚宽一级行业
             - 'jq_l2': 聚宽二级行业

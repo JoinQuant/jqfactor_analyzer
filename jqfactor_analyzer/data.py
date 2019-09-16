@@ -157,21 +157,33 @@ class DataApi(object):
         end_date = date2str(end_date) if end_date is not None else None
         if self._api_name == 'jqdata':
             get_price = partial(self.api.get_price,
+                                panel=False,
                                 pre_factor_ref_date=end_date)
         else:
             get_price = self.api.get_price
-        return get_price(
+        p = get_price(
             securities, start_date=start_date, end_date=end_date, count=count,
             fields=fields, skip_paused=skip_paused, fq=fq
         )
+        if hasattr(p, 'to_frame'):
+            p = p.to_frame()
+            p.index.names = ['time', 'code']
+            p.reset_index(inplace=True)
+        return p
 
     def get_prices(self, securities, start_date=None, end_date=None,
-                   count=None):
-        return self._get_price(
+                   period=None):
+        if period is not None:
+            trade_days = self.api.get_trade_days(start_date=date2str(end_date))
+            if len(trade_days):
+                end_date = trade_days[:period + 1][-1]
+        p = self._get_price(
             fields=[self.price], securities=securities,
             start_date=start_date, end_date=end_date,
-            count=count, fq=self.fq
-        )[self.price]
+            fq=self.fq
+        )
+        p = p.set_index(['time', 'code'])[self.price].unstack('code').sort_index()
+        return p
 
     def _get_industry(self, securities, start_date, end_date,
                       industry='jq_l1'):

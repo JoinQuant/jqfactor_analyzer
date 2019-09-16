@@ -24,8 +24,10 @@ class FactorAnalyzer(object):
         ----------
         factor :
             因子值
-            pd.DataFrame
+            pd.DataFrame / pd.Series
             一个 DataFrame, index 为日期, columns 为资产,
+            values 为因子的值
+            或一个 Series, index 为日期和资产的 MultiIndex,
             values 为因子的值
         prices :
             用于计算因子远期收益的价格数据
@@ -246,19 +248,18 @@ class FactorAnalyzer(object):
         """格式化因子数据和定价数据"""
 
         factor_data = self.factor
+        if isinstance(factor_data, pd.DataFrame):
+            factor_data = factor_data.stack(dropna=False)
 
-        stocks = list(factor_data.columns.drop_duplicates())
-        start_date = min(factor_data.index)
-        end_date = max(factor_data.index)
+        stocks = list(factor_data.index.get_level_values(1).drop_duplicates())
+        start_date = min(factor_data.index.get_level_values(0))
+        end_date = max(factor_data.index.get_level_values(0))
 
         if hasattr(self.prices, "__call__"):
             prices = self.prices(securities=stocks,
                                  start_date=start_date,
-                                 end_date=end_date).append(
-                     self.prices(securities=stocks,
                                  end_date=end_date,
-                                 count=max(self._periods) + 1)
-                    )
+                                 period=max(self._periods))
             prices = prices.loc[~prices.index.duplicated()]
         else:
             prices = self.prices
@@ -281,7 +282,7 @@ class FactorAnalyzer(object):
         self._weights = weights
 
         self._clean_factor_data = get_clean_factor_and_forward_returns(
-            factor_data.stack(),
+            factor_data,
             prices,
             groupby=groupby,
             weights=weights,
