@@ -223,7 +223,7 @@ class FactorAnalyzer(object):
         """
 
     def __init__(self, factor, prices, groupby=None, weights=1.0,
-                 quantiles=5, bins=None, periods=(1, 5, 10),
+                 quantiles=None, bins=None, periods=(1, 5, 10),
                  binning_by_group=False, max_loss=0.25, zero_aware=False):
 
         self.factor = factor

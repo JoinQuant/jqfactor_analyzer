@@ -284,7 +284,7 @@ def get_clean_factor(factor,
 
     merged_data = merged_data.dropna()
 
-    no_raise = False if max_loss == 0 else True
+    no_raise = True if max_loss == 0 else False
     quantile_data = quantize_factor(
         merged_data,
         quantiles,
@@ -310,7 +310,7 @@ def get_clean_factor(factor,
 
     if tot_loss > max_loss:
         message = ("max_loss (%.1f%%) 超过 %.1f%%"
-                   % (max_loss * 100, tot_loss * 100))
+                   % (tot_loss * 100, max_loss * 100))
         raise MaxLossExceededError(message)
 
     return merged_data
