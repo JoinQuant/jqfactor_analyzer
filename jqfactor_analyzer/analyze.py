@@ -202,13 +202,14 @@ class FactorAnalyzer(object):
         plot_ic_hist: 画信息比率分布直方图
         plot_ic_qq: 画信息比率 qq 图
         plot_quantile_returns_bar: 画各分位数平均收益图
+        plot_quantile_returns_violin: 画各分位数收益分布图
         plot_mean_quantile_returns_spread_time_series: 画最高分位减最低分位收益图
         plot_ic_by_group: 画按行业分组信息比率(IC)图
         plot_factor_auto_correlation: 画因子自相关图
         plot_top_bottom_quantile_turnover: 画最高最低分位换手率图
         plot_monthly_ic_heatmap: 画月度信息比率(IC)图
-        plot_cumulative_returns: 画按因子值加权多空组合每日累积收益图
-        plot_cumulative_returns_by_quantile: 画做多最高分位做空最低分位多空组合每日累计收益图
+        plot_cumulative_returns: 画按因子值加权组合每日累积收益图
+        plot_cumulative_returns_by_quantile: 画各分位数每日累积收益图
         plot_quantile_average_cumulative_return: 因子预测能力平均累计收益图
         plot_events_distribution: 画有效因子数量统计图
 
@@ -298,21 +299,25 @@ class FactorAnalyzer(object):
     @lru_cache(16)
     def calc_mean_return_by_quantile(self, by_date=False, by_group=False,
                                      demeaned=False, group_adjust=False):
-        """计算按分位数分组加权因子收益和标准差
+        """计算按分位数分组因子收益和标准差
+
+        因子收益为收益按照 weight 列中权重的加权平均值
 
         参数:
         by_date:
-        - True: 在分位数分组下, 得到每天的因子收益和标准差
-        - False: 按分位数分组加权因子收益和标准差
+        - True: 按天计算收益
+        - False: 不按天计算收益
         by_group:
-        - True: 在分位数分组下, 得到每个行业的因子收益和标准差
-        - False: 按分位数分组加权因子收益和标准差
+        - True: 按行业计算收益
+        - False: 不按行业计算收益
         demeaned:
-        - True: 对每天的因子收益和标准差去均值
-        - False: 按分位数分组加权因子收益和标准差
+        - True: 使用超额收益计算各分位数收益，超额收益=收益-基准收益
+                (基准收益被认为是每日所有股票收益按照weight列中权重的加权的均值)
+        - False: 不使用超额收益
         group_adjust:
-        - True: 每天的因子收益和标准差按行业去均值
-        - False: 按分位数分组加权因子收益和标准差
+        - True: 使用行业中性收益计算各分位数收益，行业中性收益=收益-行业收益
+                (行业收益被认为是每日各个行业股票收益按照weight列中权重的加权的均值)
+        - False: 不使用行业中性收益
         """
         return pef.mean_return_by_quantile(self._clean_factor_data,
                                            by_date=by_date,
@@ -322,15 +327,19 @@ class FactorAnalyzer(object):
 
     @lru_cache(4)
     def calc_factor_returns(self, demeaned=True, group_adjust=False):
-        """计算按因子值加权多空组合每日收益
+        """计算按因子值加权组合每日收益
+
+        权重 = 每日因子值 / 每日因子值的绝对值的和
+        正的权重代表买入, 负的权重代表卖出
 
         参数:
         demeaned:
-        - True:对每天的因子收益去均值
-        - False: 每日因子收益
+        - True: 对权重去均值 (每日权重 = 每日权重 - 每日权重的均值), 使组合转换为 cash-neutral 多空组合
+        - False: 不对权重去均值
         group_adjust:
-        - True: 对每天的因子收益去均值按行业去均值
-        - False: 计算按因子值加权多空组合每日收益
+        - True: 对权重分行业去均值 (每日权重 = 每日权重 - 每日各行业权重的均值)，
+                使组合转换为 industry-neutral 多空组合
+        - False: 不对权重分行业去均值
         """
         return pef.factor_returns(self._clean_factor_data,
                                   demeaned=demeaned,
@@ -345,17 +354,17 @@ class FactorAnalyzer(object):
         upper_quant: 用 upper_quant 选择的分位数减去 lower_quant 选择的分位数
         lower_quant: 用 upper_quant 选择的分位数减去 lower_quant 选择的分位数
         by_date:
-        - True: 每天的两个分位数相减的因子收益和标准差
-        - False: 两个分位数相减的因子收益和标准差
+        - True: 按天计算两个分位数相减的因子收益和标准差
+        - False: 不按天计算两个分位数相减的因子收益和标准差
         by_group:
-        - True: 每个行业的两个分位数相减的因子收益和标准差
-        - False: 两个分位数相减的因子收益和标准差
+        - True: 分行业计算两个分位数相减的因子收益和标准差
+        - False: 不分行业计算两个分位数相减的因子收益和标准差
         demeaned:
-        - True: 两个分位数相减去均值后的每天的因子收益和标准差
-        - False: 两个分位数相减的因子收益和标准差
+        - True: 使用超额收益 (基准收益被认为是每日所有股票收益按照weight列中权重加权的均值)
+        - False: 不使用超额收益
         group_adjust:
-        - True: 两个分位数相减按行业去均值后的因子收益和标准差
-        - False: 两个分位数相减的因子收益和标准差
+        - True: 使用行业中性收益 (行业收益被认为是每日各个行业股票收益按照weight列中权重加权的均值)
+        - False: 不使用行业中性收益
         """
         upper_quant = upper_quant if upper_quant is not None else self._quantiles
         lower_quant = lower_quant if lower_quant is not None else 1
@@ -374,13 +383,23 @@ class FactorAnalyzer(object):
     def calc_factor_alpha_beta(self, demeaned=True, group_adjust=False):
         """计算因子的 alpha 和 beta
 
+        因子值加权组合每日收益 = beta * 市场组合每日收益 + alpha
+
+        因子值加权组合每日收益计算方法见 calc_factor_returns 函数
+        市场组合每日收益是每日所有股票收益按照weight列中权重加权的均值
+        结果中的 alpha 是年化 alpha
+
         参数:
         demeaned:
-        - True:去均值后的因子收益计算得到的alpha和beta
-        - False: 计算因子的 alpha 和 beta
+        详见 calc_factor_returns 中 demeaned 参数
+        - True: 对因子值加权组合每日收益的权重去均值 (每日权重 = 每日权重 - 每日权重的均值),
+                使组合转换为cash-neutral多空组合
+        - False: 不对权重去均值
         group_adjust:
-        - True: 按行业去均值后的因子收益计算得到的alpha和beta
-        - False: 计算因子的 alpha 和 beta
+        详见 calc_factor_returns 中 group_adjust 参数
+        - True: 对权重分行业去均值 (每日权重 = 每日权重 - 每日各行业权重的均值)，
+                使组合转换为 industry-neutral 多空组合
+        - False: 不对权重分行业去均值
         """
         return pef.factor_alpha_beta(self._clean_factor_data,
                                      demeaned=demeaned,
@@ -392,11 +411,11 @@ class FactorAnalyzer(object):
 
         参数:
         group_adjust:
-        - True: 按行业去均值后的因子收益计算得到的IC值
-        - False: IC值
+        - True: 使用行业中性收益计算 IC (行业收益被认为是每日各个行业股票收益按照weight列中权重加权的均值)
+        - False: 不使用行业中性收益
         by_group:
-        - True: 得到每日因子信息比率的各行业IC值
-        - False: IC值
+        - True: 分行业计算 IC
+        - False: 不分行业计算 IC
         method:
         - 'rank': 用秩相关系数计算IC值
         - 'normal': 用普通相关系数计算IC值
@@ -422,11 +441,11 @@ class FactorAnalyzer(object):
 
         参数:
         group_adjust:
-        - True: 按行业去均值后的因子收益计算得到的IC值均值
-        - False: IC值均值
+        - True: 使用行业中性收益计算 IC (行业收益被认为是每日各个行业股票收益按照weight列中权重加权的均值)
+        - False: 不使用行业中性收益
         by_group:
-        - True: 各行业IC值均值
-        - False: IC值均值
+        - True: 分行业计算 IC
+        - False: 不分行业计算 IC
         by_time:
         - 'Y': 按年求均值
         - 'M': 按月求均值
@@ -460,8 +479,13 @@ class FactorAnalyzer(object):
         参数:
         periods_before: 计算过去的天数
         periods_after: 计算未来的天数
-        demeaned: 对每日因子收益去均值后计算未来和过去的收益均值和标准差
-        group_adjust: 按行业对因子收益去均值后计算未来和过去的收益均值和标准差
+        demeaned:
+        - True: 使用超额收益计算累积收益 (基准收益被认为是每日所有股票收益按照weight列中权重加权的均值)
+        - False: 不使用超额收益
+        group_adjust:
+        - True: 使用行业中性化后的收益计算累积收益
+                (行业收益被认为是每日各个行业股票收益按照weight列中权重加权的均值)
+        - False: 不使用行业中性化后的收益
         """
         return pef.average_cumulative_return_by_quantile(
             self._clean_factor_data,
@@ -475,6 +499,8 @@ class FactorAnalyzer(object):
     @lru_cache(2)
     def calc_autocorrelation(self, rank=True):
         """根据调仓周期确定滞后期的每天计算因子自相关性
+
+        当日因子值和滞后period天的因子值的自相关性
 
         参数:
         rank:
@@ -493,7 +519,7 @@ class FactorAnalyzer(object):
 
     @lru_cache(None)
     def calc_quantile_turnover_mean_n_days_lag(self, n=10):
-        """各分位数 1 - n 天换手率的平均
+        """各分位数滞后1天到n天的换手率均值
 
         参数:
         n: 滞后 1 天到 n 天的换手率
@@ -514,10 +540,10 @@ class FactorAnalyzer(object):
 
     @lru_cache(None)
     def calc_autocorrelation_n_days_lag(self, n=10, rank=False):
-        """滞后n天因子值自相关性
+        """滞后1-n天因子值自相关性
 
         参数:
-        n: 滞后 1 天到 n 天的因子值自相关性
+        n: 滞后1天到n天的因子值自相关性
         rank:
         - True: 秩相关系数
         - False: 普通相关系数
@@ -556,16 +582,18 @@ class FactorAnalyzer(object):
         return ac.mean(level=('group' if by_group else None))
 
     def calc_ic_mean_n_days_lag(self, n=10, group_adjust=False, by_group=False, method=None):
-        """滞后 0 - n 天因子收益信息比率(IC)的移动平均
+        """滞后 0 - n 天因子收益信息比率(IC)的均值
+
+        滞后 n 天 IC 表示使用当日因子值和滞后 n 天的因子收益计算 IC
 
         参数:
-        n: 滞后0-n天因子收益的信息比率(IC)的移动平均
+        n: 滞后0-n天因子收益的信息比率(IC)的均值
         group_adjust:
-        - True: 按行业对因子收益去均值后滞后0-n天因子收益的信息比率(IC)的移动平均
-        - False: 滞后 0 - n 天因子收益信息比率(IC)的移动平均
+        - True: 使用行业中性收益计算 IC (行业收益被认为是每日各个行业股票收益按照weight列中权重加权的均值)
+        - False: 不使用行业中性收益
         by_group:
-        - True: 滞后 0 - n 天各行业的因子收益信息比率(IC)的移动平均
-        - False: 滞后 0 - n 天因子收益信息比率(IC)的移动平均
+        - True: 分行业计算 IC
+        - False: 不分行业计算 IC
         method:
         - 'rank': 用秩相关系数计算IC值
         - 'normal': 用普通相关系数计算IC值
@@ -656,7 +684,7 @@ class FactorAnalyzer(object):
         """分行业的分位数收益
 
         返回值:
-            Multi_index 的 DataFrame
+            MultiIndex 的 DataFrame
             index 分别是分位数、 行业名称,  column 是 period  (1, 5, 10)
         """
         mean_return_group, _ = self.calc_mean_return_by_quantile(
@@ -711,16 +739,25 @@ class FactorAnalyzer(object):
     @lru_cache(20)
     def calc_cumulative_returns(self, period=None,
                                 demeaned=False, group_adjust=False):
-        """计算指定调仓周期的按因子值加权多空组合每日累积收益
+        """计算指定调仓周期的按因子值加权组合每日累积收益
+
+        当 period > 1 时，组合的累积收益计算方法为：
+        组合每日收益 = （从第0天开始每period天一调仓的组合每日收益 +
+                        从第1天开始每period天一调仓的组合每日收益 + ... +
+                        从第period-1天开始每period天一调仓的组合每日收益) / period
+        组合累积收益 = 组合每日收益的累积
 
         参数:
         period: 指定调仓周期
         demeaned:
-        - True: 对每日因子收益去均值后按因子值加权多空组合每日累积收益
-        - False: 按因子值加权多空组合每日累积收益
+        详见 calc_factor_returns 中 demeaned 参数
+        - True: 对权重去均值 (每日权重 = 每日权重 - 每日权重的均值), 使组合转换为 cash-neutral 多空组合
+        - False: 不对权重去均值
         group_adjust:
-        - True: 按行业对因子收益去均值后按因子值加权多空组合每日累积收益
-        - False: 按因子值加权多空组合每日累积收益
+        详见 calc_factor_returns 中 group_adjust 参数
+        - True: 对权重分行业去均值 (每日权重 = 每日权重 - 每日各行业权重的均值)，
+                使组合转换为 industry-neutral 多空组合
+        - False: 不对权重分行业去均值
         """
         if period is None:
             period = self._periods[0]
@@ -734,16 +771,19 @@ class FactorAnalyzer(object):
     @lru_cache(20)
     def calc_top_down_cumulative_returns(self, period=None,
                                          demeaned=False, group_adjust=False):
-        """计算指定调仓周期和前面定义好的加权方式计算多空组合每日累计收益
+        """计算做多最大分位，做空最小分位组合每日累积收益
 
         参数:
         period: 指定调仓周期
-        emeaned:
-        - True: 对每日因子收益去均值后按因子值加权多空组合每日累积收益
-        - False: 按因子值加权多空组合每日累积收益
+        demeaned:
+        详见 calc_mean_return_by_quantile 中 demeaned 参数
+        - True: 使用超额收益计算累积收益 (基准收益被认为是每日所有股票收益按照weight列中权重加权的均值)
+        - False: 不使用超额收益
         group_adjust:
-        - True: 按行业对因子收益去均值后按因子值加权多空组合每日累积收益
-        - False: 按因子值加权多空组合每日累积收益
+        详见 calc_mean_return_by_quantile 中 group_adjust 参数
+        - True: 使用行业中性化后的收益计算累积收益
+                (行业收益被认为是每日各个行业股票收益按照weight列中权重加权的均值)
+        - False: 不使用行业中性化后的收益
         """
         if period is None:
             period = self._periods[0]
@@ -829,11 +869,11 @@ class FactorAnalyzer(object):
 
         参数:
         demeaned:
-        - True: 对每日因子收益去均值求得因子收益表
-        - False: 因子收益表
+        - True: 使用超额收益计算 (基准收益被认为是每日所有股票收益按照weight列中权重的加权的均值)
+        - False: 不使用超额收益
         group_adjust:
-        - True: 按行业对因子收益去均值后求得因子收益表
-        - False: 因子收益表
+        - True: 使用行业中性收益 (行业收益被认为是每日各个行业股票收益按照weight列中权重的加权的均值)
+        - False: 不使用行业中性收益
         """
         mean_return_by_quantile = self.calc_mean_return_by_quantile(
             by_date=False, by_group=False,
@@ -863,7 +903,16 @@ class FactorAnalyzer(object):
         )
 
     def plot_information_table(self, group_adjust=False, method=None):
-        """打印信息比率 (IC)相关表"""
+        """打印信息比率 (IC)相关表
+
+        参数:
+        group_adjust:
+        - True：使用行业中性收益 (行业收益被认为是每日各个行业股票收益按照weight列中权重的加权的均值)
+        - False：不使用行业中性收益
+        method：
+        - 'rank'：用秩相关系数计算IC值
+        - 'normal':用相关系数计算IC值
+        """
         ic = self.calc_factor_information_coefficient(
             group_adjust=group_adjust,
             by_group=False,
@@ -880,8 +929,8 @@ class FactorAnalyzer(object):
 
         参数:
         group_adjust:
-        - True: 按行业对因子收益去均值后求得因子收益用于计算IC
-        - False: 因子收益用于计算IC
+        - True: 使用行业中性收益 (行业收益被认为是每日各个行业股票收益按照weight列中权重的加权的均值)
+        - False: 不使用行业中性收益
         method:
         - 'rank': 用秩相关系数计算IC值
         - 'normal':用相关系数计算IC值
@@ -896,8 +945,8 @@ class FactorAnalyzer(object):
 
         参数:
         group_adjust:
-        - True: 按行业对因子收益去均值后求得因子收益用于计算IC
-        - False: 因子收益用于计算IC
+        - True: 使用行业中性收益 (行业收益被认为是每日各个行业股票收益按照weight列中权重的加权的均值)
+        - False: 不使用行业中性收益
         method:
         - 'rank': 用秩相关系数计算IC值
         - 'normal': 用相关系数计算IC值
@@ -914,8 +963,8 @@ class FactorAnalyzer(object):
 
         参数:
         group_adjust:
-        - True: 按行业对因子收益去均值后求得因子收益用于计算IC
-        - False: 因子收益用于计算IC
+        - True: 使用行业中性收益 (行业收益被认为是每日各个行业股票收益按照weight列中权重的加权的均值)
+        - False: 不使用行业中性收益
         method:
         - 'rank': 用秩相关系数计算IC值
         - 'normal': 用相关系数计算IC值
@@ -941,11 +990,12 @@ class FactorAnalyzer(object):
         - True: 各行业的各分位数平均收益图
         - False: 各分位数平均收益图
         demeaned:
-        - True: 对每日因子收益去均值后的各分位数平均收益图
-        - False: 各分位数平均收益图
+        - True: 使用超额收益计算累积收益 (基准收益被认为是每日所有股票收益按照weight列中权重加权的均值)
+        - False: 不使用超额收益
         group_adjust:
-        - True: 按行业对因子收益去均值后的各分位数平均收益图
-        - False: 各分位数平均收益图
+        - True: 使用行业中性化后的收益计算累积收益
+                (行业收益被认为是每日各个行业股票收益按照weight列中权重加权的均值)
+        - False: 不使用行业中性化后的收益
         """
         mean_return_by_quantile = self.calc_mean_return_by_quantile(
             by_date=False, by_group=by_group,
@@ -958,7 +1008,19 @@ class FactorAnalyzer(object):
 
     def plot_quantile_returns_violin(self, demeaned=False, group_adjust=False,
                                      ylim_percentiles=(1, 99)):
-        """"""
+        """画各分位数收益分布图
+
+        参数:
+        demeaned:
+        - True: 使用超额收益计算累积收益 (基准收益被认为是每日所有股票收益按照weight列中权重加权的均值)
+        - False: 不使用超额收益
+        group_adjust:
+        - True: 使用行业中性化后的收益计算累积收益
+                (行业收益被认为是每日各个行业股票收益按照weight列中权重加权的均值)
+        - False: 不使用行业中性化后的收益
+        plot_quantile_returns_violin: 有效收益分位数(单位为百分之). 画图时y轴的范围为有效收益的最大/最小值.
+                                      例如 (1, 99) 代表收益的从小到大排列的 1% 分位到 99% 分位为有效收益.
+        """
         mean_return_by_date = self.calc_mean_return_by_quantile(
             by_date=True, by_group=False,
             demeaned=demeaned, group_adjust=group_adjust
@@ -974,11 +1036,12 @@ class FactorAnalyzer(object):
 
         参数:
         demeaned:
-        - True: 对每日因子收益去均值后的最高分位减最低分位收益图
-        - False: 最高分位减最低分位收益图
+        - True: 使用超额收益计算累积收益 (基准收益被认为是每日所有股票收益按照weight列中权重加权的均值)
+        - False: 不使用超额收益
         group_adjust:
-        - True: 按行业对因子收益去均值后的最高分位减最低分位收益图图
-        - False: 最高分位减最低分位收益图
+        - True: 使用行业中性化后的收益计算累积收益
+                (行业收益被认为是每日各个行业股票收益按照weight列中权重加权的均值)
+        - False: 不使用行业中性化后的收益
         bandwidth: n, 加减 n 倍当日标准差
         """
         mean_returns_spread, mean_returns_spread_std = self.compute_mean_returns_spread(
@@ -1000,8 +1063,8 @@ class FactorAnalyzer(object):
 
         参数:
         group_adjust:
-        - True: 按行业对因子收益去均值后的行业分组信息比率图
-        - False: 行业分组信息比率图
+        - True: 使用行业中性收益 (行业收益被认为是每日各个行业股票收益按照weight列中权重的加权的均值)
+        - False: 不使用行业中性收益
         method:
         - 'rank': 用秩相关系数计算IC值
         - 'normal': 用相关系数计算IC值
@@ -1017,7 +1080,7 @@ class FactorAnalyzer(object):
         """画因子自相关图
 
         参数:
-        periods: 调仓周期
+        periods: 滞后周期
         rank:
         - True: 用秩相关系数
         - False: 用相关系数
@@ -1061,8 +1124,8 @@ class FactorAnalyzer(object):
 
         参数:
         group_adjust:
-        - True: 按行业对因子收益去均值后的月度信息比率图
-        - False: 月度信息比率图
+        - True: 使用行业中性收益 (行业收益被认为是每日各个行业股票收益按照weight列中权重的加权的均值)
+        - False: 不使用行业中性收益
         """
         ic_monthly = self.calc_mean_information_coefficient(
             group_adjust=group_adjust, by_group=False, by_time="M"
@@ -1071,16 +1134,20 @@ class FactorAnalyzer(object):
 
     def plot_cumulative_returns(self, period=None, demeaned=False,
                                 group_adjust=False):
-        """画按因子值加权多空组合每日累积收益图
+        """画按因子值加权组合每日累积收益图
 
         参数:
         periods: 调仓周期
         demeaned:
-        - True: 对每日因子收益去均值后的按因子值加权多空组合每日累积收益图
-        - False: 按因子值加权多空组合每日累积收益图
+        详见 calc_factor_returns 中 demeaned 参数
+        - True: 对因子值加权组合每日收益的权重去均值 (每日权重 = 每日权重 - 每日权重的均值),
+                使组合转换为cash-neutral多空组合
+        - False: 不对权重去均值
         group_adjust:
-        - True: 按行业对因子收益去均值后的按因子值加权多空组合每日累积收益图
-        - False: 按因子值加权多空组合每日累积收益图
+        详见 calc_factor_returns 中 group_adjust 参数
+        - True: 对权重分行业去均值 (每日权重 = 每日权重 - 每日各行业权重的均值)，
+                使组合转换为 industry-neutral 多空组合
+        - False: 不对权重分行业去均值
         """
         if period is None:
             period = self._periods
@@ -1098,16 +1165,19 @@ class FactorAnalyzer(object):
 
     def plot_cumulative_returns_by_quantile(self, period=None, demeaned=False,
                                             group_adjust=False):
-        """画做多最高分位做空最低分位多空组合每日累计收益图
+        """画各分位数每日累积收益图
 
         参数:
-        periods: 调仓周期
+        period: 调仓周期
         demeaned:
-        - True: 对每日因子收益去均值后的多空组合每日累计收益图
-        - False: 多空组合每日累计收益图
+        详见 calc_mean_return_by_quantile 中 demeaned 参数
+        - True: 使用超额收益计算累积收益 (基准收益被认为是每日所有股票收益按照weight列中权重加权的均值)
+        - False: 不使用超额收益
         group_adjust:
-        - True: 按行业对因子收益去均值后的多空组合每日累计收益图
-        - False: 多空组合每日累计收益图
+        详见 calc_mean_return_by_quantile 中 group_adjust 参数
+        - True: 使用行业中性化后的收益计算累积收益
+                (行业收益被认为是每日各个行业股票收益按照weight列中权重加权的均值)
+        - False: 不使用行业中性化后的收益
         """
         if period is None:
             period = self._periods
@@ -1132,18 +1202,19 @@ class FactorAnalyzer(object):
         参数:
         periods_before: 计算过去的天数
         periods_after: 计算未来的天数
-        by_quantile:
-        - True: 各分位数分别显示因子预测能力平均累计收益图
-        - False: 因子预测能力平均累计收益图
+        by_quantile: 是否各分位数分别显示因子预测能力平均累计收益图
         std_bar:
         - True: 显示标准差
         - False: 不显示标准差
         demeaned:
-        - True: 对每天的因子收益和标准差去均值
-        - False: 按分位数分组加权因子收益和标准差
+        详见 calc_mean_return_by_quantile 中 demeaned 参数
+        - True: 使用超额收益计算累积收益 (基准收益被认为是每日所有股票收益按照weight列中权重加权的均值)
+        - False: 不使用超额收益
         group_adjust:
-        - True: 每天的因子收益和标准差按行业去均值
-        - False: 按分位数分组加权因子收益和标准差
+        详见 calc_mean_return_by_quantile 中 group_adjust 参数
+        - True: 使用行业中性化后的收益计算累积收益
+                (行业收益被认为是每日各个行业股票收益按照weight列中权重加权的均值)
+        - False: 不使用行业中性化后的收益
         """
         average_cumulative_return_by_q = self.calc_average_cumulative_return_by_quantile(
             periods_before=periods_before, periods_after=periods_after,
@@ -1186,18 +1257,17 @@ class FactorAnalyzer(object):
         self.plot_turnover_table()
 
     def create_returns_tear_sheet(self, demeaned=False, group_adjust=False, by_group=False):
-        """因子收益分析
+        """因子值特征分析
 
         参数:
         demeaned:
-        - True: 对每日因子收益去均值求得因子收益表
-        - False: 因子收益表
+        详见 calc_mean_return_by_quantile 中 demeaned 参数
+        - True: 使用超额收益计算 (基准收益被认为是每日所有股票收益按照weight列中权重加权的均值)
+        - False: 不使用超额收益
         group_adjust:
-        - True: 按行业对因子收益去均值后求得因子收益表
-        - False: 因子收益表
-        by_group:
-        - True: 画各行业的各分位数平均收益图
-        - False: 不画各行业的各分位数平均收益图
+        详见 calc_mean_return_by_quantile 中 group_adjust 参数
+        - True: 使用行业中性化后的收益计算 (行业收益被认为是每日各个行业股票收益按照weight列中权重加权的均值)
+        - False: 不使用行业中性化后的收益
         """
         self.plot_returns_table(demeaned=demeaned, group_adjust=group_adjust)
         self.plot_quantile_returns_bar(by_group=False,
@@ -1230,8 +1300,8 @@ class FactorAnalyzer(object):
 
         参数:
         group_adjust:
-        - True: 按行业对因子收益去均值后求得因子收益表
-        - False: 因子收益表
+        - True: 使用行业中性收益 (行业收益被认为是每日各个行业股票收益按照weight列中权重的加权的均值)
+        - False: 不使用行业中性收益
         by_group:
         - True: 画按行业分组信息比率(IC)图
         - False: 画月度信息比率(IC)图
@@ -1267,11 +1337,14 @@ class FactorAnalyzer(object):
         avgretplot: tuple 因子预测的天数
         -(计算过去的天数, 计算未来的天数)
         demeaned:
-        - True: 对每天的因子收益和标准差去均值
-        - False: 按分位数分组加权因子收益和标准差
+        详见 calc_mean_return_by_quantile 中 demeaned 参数
+        - True: 使用超额收益计算累积收益 (基准收益被认为是每日所有股票收益按照weight列中权重加权的均值)
+        - False: 不使用超额收益
         group_adjust:
-        - True: 每天的因子收益和标准差按行业去均值
-        - False: 按分位数分组加权因子收益和标准差
+        详见 calc_mean_return_by_quantile 中 group_adjust 参数
+        - True: 使用行业中性化后的收益计算累积收益
+                (行业收益被认为是每日各个行业股票收益按照weight列中权重加权的均值)
+        - False: 不使用行业中性化后的收益
         std_bar:
         - True: 显示标准差
         - False: 不显示标准差
@@ -1297,11 +1370,12 @@ class FactorAnalyzer(object):
 
         参数:
         demeaned:
-        - True: 对每天的因子收益和标准差去均值
-        - False: 按分位数分组加权因子收益和标准差
+        - True：使用超额收益计算 (基准收益被认为是每日所有股票收益按照weight列中权重加权的均值)
+        - False：不使用超额收益
         group_adjust:
-        - True: 每天的因子收益和标准差按行业去均值
-        - False: 按分位数分组加权因子收益和标准差
+        - True：使用行业中性化后的收益计算
+                (行业收益被认为是每日各个行业股票收益按照weight列中权重加权的均值)
+        - False：不使用行业中性化后的收益
         by_group:
         - True: 按行业展示
         - False: 不按行业展示

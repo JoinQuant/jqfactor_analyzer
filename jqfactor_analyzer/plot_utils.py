@@ -198,6 +198,8 @@ QRETURNBAR = QRETURNBAR()
 
 
 class QRETURNVIOLIN(_PlotLabels):
+    LEGENDNAME_CN = "滞后天数"
+    LEGENDNAME_EN = "forward periods"
     TITLE_CN = "各分位数收益分布图"
     TITLE_EN = "Period Wise Return By Factor Quantile"
     YLABEL_CN = "收益 (bps)"
@@ -246,6 +248,8 @@ class TBTURNOVER(_PlotLabels):
     TURNOVER_EN = "quantile {:d} turnover"
     TITLE_CN = "{} 天换手率"
     TITLE_EN = "{} Period Top and Bottom Quantile Turnover"
+    YLABEL_CN = "分位数换手率"
+    YLABEL_EN = "Proportion Of Names New To Quantile"
 
 
 TBTURNOVER = TBTURNOVER()

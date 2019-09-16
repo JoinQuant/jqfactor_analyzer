@@ -317,7 +317,7 @@ def plot_quantile_returns_violin(return_by_q, ylim_percentiles=None, ax=None):
     unstacked_dr = (return_by_q.multiply(DECIMAL_TO_BPS))
     unstacked_dr.columns = unstacked_dr.columns.astype(str).str.replace(
         'period_', ''
-    ).set_names('forward_periods')
+    ).astype(int).set_names(QRETURNVIOLIN.get("LEGENDNAME"))
     unstacked_dr = unstacked_dr.stack()
     unstacked_dr.name = 'return'
     unstacked_dr = unstacked_dr.reset_index()
@@ -325,7 +325,7 @@ def plot_quantile_returns_violin(return_by_q, ylim_percentiles=None, ax=None):
     sns.violinplot(
         data=unstacked_dr,
         x='factor_quantile',
-        hue='forward_periods',
+        hue=QRETURNVIOLIN.get("LEGENDNAME"),
         y='return',
         orient='v',
         cut=0,
@@ -477,7 +477,7 @@ def plot_top_bottom_quantile_turnover(quantile_turnover, period=1, ax=None):
         title=TBTURNOVER.get("TITLE").format(period), ax=ax, alpha=0.6, lw=0.8
     )
 
-    ax.set(ylabel='Proportion Of Names New To Quantile', xlabel="")
+    ax.set(ylabel=TBTURNOVER.get("YLABEL"), xlabel="")
 
     return ax
 
@@ -513,7 +513,7 @@ def plot_monthly_ic_heatmap(mean_monthly_ic, ax=None):
             annot=True,
             alpha=1.0,
             center=0.0,
-            annot_kws={"size": 7},
+            annot_kws={"size": 15},
             linewidths=0.01,
             linecolor='white',
             cmap=cm.RdYlGn,
