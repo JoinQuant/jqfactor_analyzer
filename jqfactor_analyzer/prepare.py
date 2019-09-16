@@ -284,13 +284,12 @@ def get_clean_factor(factor,
 
     merged_data = merged_data.dropna()
 
-    no_raise = True if max_loss == 0 else False
     quantile_data = quantize_factor(
         merged_data,
         quantiles,
         bins,
         binning_by_group,
-        no_raise,
+        True,
         zero_aware
     )
 
@@ -308,7 +307,8 @@ def get_clean_factor(factor,
 
     tot_loss = (initial_amount - binning_amount) / initial_amount
 
-    if tot_loss > max_loss:
+    no_raise = True if max_loss == 0 else False
+    if tot_loss > max_loss and not no_raise:
         message = ("max_loss (%.1f%%) 超过 %.1f%%"
                    % (tot_loss * 100, max_loss * 100))
         raise MaxLossExceededError(message)

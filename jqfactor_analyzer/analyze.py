@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import division
+from __future__ import division, print_function
 
-from collections import Iterable
+from collections.abc import Iterable
 
 import numpy as np
 import pandas as pd
@@ -62,14 +62,16 @@ class FactorAnalyzer(object):
             如果要分析分组(行业)中性的组合, 您最好设置为 True
         quantiles :
             int or sequence[float]
-            在因子分组中按照因子值大小平均分组的组数. 默认为 None
-             或分位数序列, 允许不均匀分组
+            默认为 None
+            在因子分组中按照因子值大小平均分组的组数
+            或分位数序列, 允许不均匀分组.
             例如 [0, .10, .5, .90, 1.] 或 [.05, .5, .95]
             'quantiles' 和 'bins' 有且只能有一个不为 None
         bins :
-            sequence[float]
-            在因子分组中使用的等宽 (按照因子值) 区间的数量. 默认为 None
-            或边界值序列, 允许不均匀的区间宽度
+            int or sequence[float]
+            默认为 None
+            在因子分组中使用的等宽 (按照因子值) 区间的数量
+            或边界值序列, 允许不均匀的区间宽度.
             例如 [-4, -2, -0.5, 0, 10]
             'quantiles' 和 'bins' 有且只能有一个不为 None
         periods :
@@ -298,6 +300,25 @@ class FactorAnalyzer(object):
     def clean_factor_data(self):
         return self._clean_factor_data
 
+    @property
+    def _factor_quantile(self):
+        data = self.clean_factor_data
+        if not data.empty:
+            return max(data.factor_quantile)
+        else:
+            _quantiles = self._quantiles
+            _bins = self._bins
+            _zero_aware = self._zero_aware
+            get_len = lambda x: len(x) - 1 if isinstance(x, Iterable) else int(x)
+            if _quantiles is not None and _bins is None and not _zero_aware:
+                return get_len(_quantiles)
+            elif _quantiles is not None and _bins is None and _zero_aware:
+                return int(_quantiles) // 2 * 2
+            elif _bins is not None and _quantiles is None and not _zero_aware:
+                return get_len(_bins)
+            elif _bins is not None and _quantiles is None and _zero_aware:
+                return int(_bins) // 2 * 2
+
     @lru_cache(16)
     def calc_mean_return_by_quantile(self, by_date=False, by_group=False,
                                      demeaned=False, group_adjust=False):
@@ -368,10 +389,12 @@ class FactorAnalyzer(object):
         - True: 使用行业中性收益 (行业收益被认为是每日各个行业股票收益按照weight列中权重加权的均值)
         - False: 不使用行业中性收益
         """
-        upper_quant = upper_quant if upper_quant is not None else self._quantiles
+        upper_quant = upper_quant if upper_quant is not None else self._factor_quantile
         lower_quant = lower_quant if lower_quant is not None else 1
-        if not 1 <= upper_quant <= self._quantiles or not 1 <= lower_quant <= self._quantiles:
-            raise ValueError("upper_quant 和 low_quant 的取值范围为 1 - %s 的整数" % self._quantiles)
+        if ((not 1 <= upper_quant <= self._factor_quantile) or
+            (not 1 <= lower_quant <= self._factor_quantile)):
+            raise ValueError("upper_quant 和 low_quant 的取值范围为 1 - %s 的整数"
+                             % self._factor_quantile)
         mean, std = self.calc_mean_return_by_quantile(by_date=by_date, by_group=by_group,
                                                       demeaned=demeaned, group_adjust=group_adjust,)
         mean = mean.apply(rate_of_return, axis=0)
@@ -796,7 +819,7 @@ class FactorAnalyzer(object):
         )
         mean_returns = mean_returns.apply(rate_of_return, axis=0)
 
-        upper_quant = mean_returns[period_col].xs(self._quantiles,
+        upper_quant = mean_returns[period_col].xs(self._factor_quantile,
                                                   level='factor_quantile')
         lower_quant = mean_returns[period_col].xs(1,
                                                   level='factor_quantile')
@@ -883,7 +906,7 @@ class FactorAnalyzer(object):
         )[0].apply(rate_of_return, axis=0)
 
         mean_returns_spread, _ = self.compute_mean_returns_spread(
-            upper_quant=self._quantiles,
+            upper_quant=self._factor_quantile,
             lower_quant=1,
             by_date=True,
             by_group=False,
@@ -1047,7 +1070,7 @@ class FactorAnalyzer(object):
         bandwidth: n, 加减 n 倍当日标准差
         """
         mean_returns_spread, mean_returns_spread_std = self.compute_mean_returns_spread(
-            upper_quant=self._quantiles,
+            upper_quant=self._factor_quantile,
             lower_quant=1,
             by_date=True,
             by_group=False,
