@@ -378,7 +378,7 @@ def compute_mean_returns_spread(
         std2 = std_err.xs(lower_quant, level='factor_quantile')
     else:
         std1 = std_err.loc[upper_quant]
-        std2 = std_err.loc[upper_quant]
+        std2 = std_err.loc[lower_quant]
     joint_std_err = np.sqrt(std1**2 + std2**2)
 
     return mean_return_difference, joint_std_err
