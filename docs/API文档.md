@@ -13,12 +13,17 @@ analyze_factor(factor, industry='jq_l1', quantiles=5, periods=(1, 5, 10), weight
 
 **参数**
 
-* `factor`: 因子值，pandas.DataFrame格式的数据
+* `factor`: 因子值，
 
-   - index为日期，格式为pandas日期通用的DatetimeIndex，转换方法见[将自有因子值转换成 DataFrame 格式的数据](#将自有因子值转换成-dataframe-格式的数据)
-   - columns为股票代码，格式要求符合聚宽的代码定义规则（如：平安银行的股票代码为000001.XSHE）
-       - 如果是深交所上市的股票，在股票代码后面需要加入.XSHE
-       - 如果是上交所上市的股票，在股票代码后面需要加入.XSHG
+  pandas.DataFrame格式的数据
+
+  - index为日期，格式为pandas日期通用的DatetimeIndex，转换方法见[将自有因子值转换成 DataFrame 格式的数据](#将自有因子值转换成-dataframe-格式的数据)
+  - columns为股票代码，格式要求符合聚宽的代码定义规则（如：平安银行的股票代码为000001.XSHE）
+      - 如果是深交所上市的股票，在股票代码后面需要加入.XSHE
+      - 如果是上交所上市的股票，在股票代码后面需要加入.XSHG
+
+  或 pd.Series格式的数据
+  - index为日期和股票代码组成的MultiIndex
 
 * `industry`: 行业分类, 默认为 `'jq_l1'`
 
