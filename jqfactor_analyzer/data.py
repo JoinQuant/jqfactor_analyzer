@@ -166,9 +166,13 @@ class DataApi(object):
         start_date = date2str(start_date) if start_date is not None else None
         end_date = date2str(end_date) if end_date is not None else None
         if self._api_name == 'jqdata':
-            get_price = partial(self.api.get_price,
-                                panel=False,
-                                pre_factor_ref_date=end_date)
+            if 'panel' in self.api.get_price.__code__.co_varnames:
+                get_price = partial(self.api.get_price,
+                                    panel=False,
+                                    pre_factor_ref_date=end_date)
+            else:
+                get_price = partial(self.api.get_price,
+                                    pre_factor_ref_date=end_date)
         else:
             get_price = self.api.get_price
         p = get_price(
