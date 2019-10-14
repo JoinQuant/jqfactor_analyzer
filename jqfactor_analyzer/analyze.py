@@ -748,6 +748,15 @@ class FactorAnalyzer(object):
 
         参数:
         period: 指定调仓周期
+        demeaned:
+        详见 calc_mean_return_by_quantile 中 demeaned 参数
+        - True: 使用超额收益计算累积收益 (基准收益被认为是每日所有股票收益按照weight列中权重加权的均值)
+        - False: 不使用超额收益
+        group_adjust:
+        详见 calc_mean_return_by_quantile 中 group_adjust 参数
+        - True: 使用行业中性化后的收益计算累积收益
+                (行业收益被认为是每日各个行业股票收益按照weight列中权重加权的均值)
+        - False: 不使用行业中性化后的收益
         """
         if period is None:
             period = self._periods[0]
@@ -1274,10 +1283,10 @@ class FactorAnalyzer(object):
             demeaned=demeaned, group_adjust=group_adjust
         )
         pl.plot_quantile_average_cumulative_return(average_cumulative_return_by_q,
-                                                          by_quantile=by_quantile,
-                                                          std_bar=std_bar,
-                                                          periods_before=periods_before,
-                                                          periods_after=periods_after)
+                                                   by_quantile=by_quantile,
+                                                   std_bar=std_bar,
+                                                   periods_before=periods_before,
+                                                   periods_after=periods_after)
 
     def plot_events_distribution(self, num_days=5):
         """画有效因子数量统计图
@@ -1321,6 +1330,9 @@ class FactorAnalyzer(object):
         详见 calc_mean_return_by_quantile 中 group_adjust 参数
         - True: 使用行业中性化后的收益计算 (行业收益被认为是每日各个行业股票收益按照weight列中权重加权的均值)
         - False: 不使用行业中性化后的收益
+        by_group:
+        - True: 画各行业的各分位数平均收益图
+        - False: 不画各行业的各分位数平均收益图
         """
         self.plot_returns_table(demeaned=demeaned, group_adjust=group_adjust)
         self.plot_quantile_returns_bar(by_group=False,
