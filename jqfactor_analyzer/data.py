@@ -48,7 +48,7 @@ class DataApi(object):
         api.auth('username', 'password')
 
         factor = FactorAnalyzer(factor_data,
-                                price=api.get_price,
+                                price=api.get_prices,
                                 groupby=api.get_groupby,
                                 weights=api.get_weights)
         # 或者
