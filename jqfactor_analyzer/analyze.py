@@ -1297,7 +1297,7 @@ class FactorAnalyzer(object):
         pl.plot_events_distribution(
             events=self._clean_factor_data['factor'],
             num_days=num_days,
-            full_dates=pd.to_datetime(self.factor.index.unique())
+            full_dates=pd.to_datetime(self.factor.index.get_level_values('date').unique())
         )
 
     def create_summary_tear_sheet(self, demeaned=False, group_adjust=False):
