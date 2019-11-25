@@ -2,7 +2,7 @@
 
 from __future__ import division, print_function
 
-from collections.abc import Iterable
+from collections import Iterable
 
 import numpy as np
 import pandas as pd
