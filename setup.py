@@ -14,8 +14,10 @@ except ImportError:
     # for pip <= 9.0.3
     from pip.req import parse_requirements
 
-
-requirements = [str(ir.req) for ir in parse_requirements("requirements.txt", session=False)]
+try:
+    requirements = [str(ir.req) for ir in parse_requirements("requirements.txt", session=False)]
+except AttributeError:
+    requirements = [str(ir.requirement) for ir in parse_requirements("requirements.txt", session=False)]
 
 
 def get_version():
