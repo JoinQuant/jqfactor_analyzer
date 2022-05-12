@@ -417,7 +417,7 @@ far.plot_cumulative_returns(period=1, demeaned=False, group_adjust=False)
 #### 画做多最大分位数做空最小分位数组合每日累积收益图
 
 ```
-far.plot_cumulative_returns(period=1, demeaned=False, group_adjust=False)
+far.plot_top_down_cumulative_returns(period=1, demeaned=False, group_adjust=False)
 
 ```
 
@@ -431,7 +431,7 @@ far.plot_cumulative_returns(period=1, demeaned=False, group_adjust=False)
     - True：使用行业中性化后的收益计算累积收益 (行业收益被认为是每日各个行业股票收益按照weight列中权重加权的均值)
     - False：不使用行业中性化后的收益
 
-#### 画做多最高分位做空最低分位多空组合每日累计收益图
+#### 画各分位数每日累积收益图
 
 ```
 far.plot_cumulative_returns_by_quantile(period=(1, 3, 9), demeaned=False, group_adjust=False)
