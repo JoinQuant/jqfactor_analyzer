@@ -8,7 +8,8 @@ import numpy as np
 import pandas as pd
 from fastcache import lru_cache
 from cached_property import cached_property
-from scipy.stats import spearmanr, pearsonr, morestats
+from scipy.stats import spearmanr, pearsonr
+from scipy import stats
 
 from . import performance as pef, plotting as pl
 from .prepare import (get_clean_factor_and_forward_returns, rate_of_return,
@@ -1007,7 +1008,7 @@ class FactorAnalyzer(object):
         - 't': t 分布
         """
         theoretical_dist = 'norm' if theoretical_dist is None else theoretical_dist
-        theoretical_dist = morestats._parse_dist_kw(theoretical_dist)
+        theoretical_dist = getattr(stats, theoretical_dist)
         ic = self.calc_factor_information_coefficient(
             group_adjust=group_adjust,
             by_group=False,
