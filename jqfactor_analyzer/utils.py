@@ -5,7 +5,10 @@ import re
 import six
 import warnings
 from functools import wraps
-from collections import Iterable
+try:
+    from collections import Iterable
+except ImportError:
+    from collections.abc import Iterable
 
 import pandas as pd
 

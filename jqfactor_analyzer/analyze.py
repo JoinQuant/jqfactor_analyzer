@@ -2,7 +2,10 @@
 
 from __future__ import division, print_function
 
-from collections import Iterable
+try:
+    from collections import Iterable
+except ImportError:
+    from collections.abc import Iterable
 
 import numpy as np
 import pandas as pd
