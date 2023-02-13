@@ -40,7 +40,7 @@ import pandas as pd
 import jqfactor_analyzer as ja
 
 # 获取 jqdatasdk 授权，输入用户名、密码，申请地址：http://t.cn/EINDOxE
-# 聚宽官网及金融终端，使用方法参见：http://t.cn/EINcS4j
+# 聚宽官网，使用方法参见：http://t.cn/EINcS4j
 import jqdatasdk
 jqdatasdk.auth('username', 'password')
 
