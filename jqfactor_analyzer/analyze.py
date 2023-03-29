@@ -402,7 +402,7 @@ class FactorAnalyzer(object):
         mean, std = self.calc_mean_return_by_quantile(by_date=by_date, by_group=by_group,
                                                       demeaned=demeaned, group_adjust=group_adjust,)
         mean = mean.apply(rate_of_return, axis=0)
-        std = std.apply(rate_of_return, axis=0)
+        std = std.apply(std_conversion, axis=0)
         return pef.compute_mean_returns_spread(mean_returns=mean,
                                                upper_quant=upper_quant,
                                                lower_quant=lower_quant,
@@ -678,7 +678,7 @@ class FactorAnalyzer(object):
             demeaned=False,
             group_adjust=False,
         )
-        mean_ret_std_quantile = mean_ret_std_quantile.apply(rate_of_return, axis=0)
+        mean_ret_std_quantile = mean_ret_std_quantile.apply(std_conversion, axis=0)
         return mean_ret_std_quantile
 
     @property
@@ -733,7 +733,7 @@ class FactorAnalyzer(object):
             demeaned=True,
             group_adjust=False,
         )
-        mean_return_std_group = mean_return_std_group.apply(rate_of_return, axis=0)
+        mean_return_std_group = mean_return_std_group.apply(std_conversion, axis=0)
         return mean_return_std_group
 
     @property
