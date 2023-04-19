@@ -830,7 +830,6 @@ class FactorAnalyzer(object):
             by_date=True, by_group=False,
             demeaned=demeaned, group_adjust=group_adjust,
         )
-        mean_returns = mean_returns.apply(rate_of_return, axis=0)
 
         upper_quant = mean_returns[period_col].xs(self._factor_quantile,
                                                   level='factor_quantile')
