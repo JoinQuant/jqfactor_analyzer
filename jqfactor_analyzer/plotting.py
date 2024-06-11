@@ -26,8 +26,7 @@ DECIMAL_TO_BPS = 10000
 
 
 def plot_returns_table(alpha_beta, mean_ret_quantile, mean_ret_spread_quantile):
-    returns_table = pd.DataFrame()
-    returns_table = returns_table.append(alpha_beta)
+    returns_table = alpha_beta.copy()
     returns_table.loc["Mean Period Wise Return Top Quantile (bps)"] = \
         mean_ret_quantile.iloc[-1] * DECIMAL_TO_BPS
     returns_table.loc["Mean Period Wise Return Bottom Quantile (bps)"] = \
@@ -42,11 +41,11 @@ def plot_returns_table(alpha_beta, mean_ret_quantile, mean_ret_spread_quantile):
 def plot_turnover_table(autocorrelation_data, quantile_turnover):
     turnover_table = pd.DataFrame()
     for period in sorted(quantile_turnover.keys()):
-        for quantile, p_data in quantile_turnover[period].iteritems():
+        for quantile, p_data in quantile_turnover[period].items():
             turnover_table.loc["Quantile {} Mean Turnover ".format(quantile),
                                "{}".format(period)] = p_data.mean()
     auto_corr = pd.DataFrame()
-    for period, p_data in autocorrelation_data.iteritems():
+    for period, p_data in autocorrelation_data.items():
         auto_corr.loc["Mean Factor Rank Autocorrelation", "{}"
                       .format(period)] = p_data.mean()
 
@@ -71,8 +70,7 @@ def plot_information_table(ic_data):
 
 
 def plot_quantile_statistics_table(factor_data):
-    quantile_stats = factor_data.groupby('factor_quantile') \
-        .agg(['min', 'max', 'mean', 'std', 'count'])['factor']
+    quantile_stats = factor_data.groupby('factor_quantile',group_keys=False)['factor'].agg(['min', 'max', 'mean', 'std', 'count'])
     quantile_stats['count %'] = quantile_stats['count'] \
         / quantile_stats['count'].sum() * 100.
 
@@ -91,7 +89,7 @@ def plot_ic_ts(ic, ax=None):
         ax = np.asarray([ax]).flatten()
 
     ymin, ymax = (None, None)
-    for a, (period, ic) in zip(ax, ic.iteritems()):
+    for a, (period, ic) in zip(ax, ic.items()):
         period_num = period.replace('period_', '')
         ic.plot(alpha=0.7, ax=a, lw=0.7, color='steelblue')
         rolling_mean(
@@ -143,7 +141,7 @@ def plot_ic_hist(ic, ax=None):
         f, ax = plt.subplots(v_spaces, 3, figsize=(18, v_spaces * 6))
         ax = ax.flatten()
 
-    for a, (period, ic) in zip(ax, ic.iteritems()):
+    for a, (period, ic) in zip(ax, ic.items()):
         period_num = period.replace('period_', '')
         sns.distplot(ic.replace(np.nan, 0.), norm_hist=True, ax=a)
         a.set_xlim([-1, 1])
@@ -190,7 +188,7 @@ def plot_ic_qq(ic, theoretical_dist=stats.norm, ax=None):
     else:
         dist_name = ICQQ.get("CUSTOM")
 
-    for a, (period, ic) in zip(ax, ic.iteritems()):
+    for a, (period, ic) in zip(ax, ic.items()):
         period_num = period.replace('period_', '')
         qqplot(
             ic.replace(np.nan, 0.).values,
@@ -254,7 +252,7 @@ def plot_quantile_returns_bar(
             )
             ax = ax.flatten()
 
-        for a, (sc, cor) in zip(ax, mean_ret_by_q.groupby(level='group')):
+        for a, (sc, cor) in zip(ax, mean_ret_by_q.groupby(level='group',group_keys=False)):
             (
                 cor.xs(sc, level='group').multiply(DECIMAL_TO_BPS).plot(
                     kind='bar', title=sc, ax=a
@@ -352,8 +350,7 @@ def plot_mean_quantile_returns_spread_time_series(
             ax = [None for a in mean_returns_spread.columns]
 
         ymin, ymax = (None, None)
-        for (i, a), (name, fr_column
-                     ) in zip(enumerate(ax), mean_returns_spread.iteritems()):
+        for (i, a), (name, fr_column) in zip(enumerate(ax), mean_returns_spread.items()):
             stdn = None if std_err is None else std_err[name]
             a = plot_mean_quantile_returns_spread_time_series(
                 fr_column, std_err=stdn, bandwidth=bandwidth, ax=a
@@ -504,7 +501,7 @@ def plot_monthly_ic_heatmap(mean_monthly_ic, ax=None):
         [new_index_year, new_index_month], names=["year", "month"]
     )
 
-    for a, (period, ic) in zip(ax, mean_monthly_ic.iteritems()):
+    for a, (period, ic) in zip(ax, mean_monthly_ic.items()):
         periods_num = period.replace('period_', '')
 
         sns.heatmap(
@@ -630,7 +627,7 @@ def plot_quantile_average_cumulative_return(
             ax = ax.flatten()
 
         for i, (quantile, q_ret) in enumerate(
-            avg_cumulative_returns.groupby(level='factor_quantile')
+            avg_cumulative_returns.groupby(level='factor_quantile',group_keys=False)
         ):
 
             mean = q_ret.loc[(quantile, 'mean')]
@@ -659,7 +656,7 @@ def plot_quantile_average_cumulative_return(
             f, ax = plt.subplots(1, 1, figsize=(18, 6))
 
         for i, (quantile, q_ret) in enumerate(
-            avg_cumulative_returns.groupby(level='factor_quantile')
+            avg_cumulative_returns.groupby(level='factor_quantile',group_keys=False)
         ):
 
             mean = q_ret.loc[(quantile, 'mean')]
@@ -702,7 +699,7 @@ def plot_events_distribution(events, num_days=5, full_dates=None, ax=None):
     grouper_label = group.drop_duplicates()
     grouper = group.reindex(events.index.get_level_values('date'))
 
-    count = events.groupby(grouper.values).count()
+    count = events.groupby(grouper.values,group_keys=False).count()
     count = count.reindex(grouper_label.values, fill_value=0)
     count.index = grouper_label.index.map(lambda x: x.strftime('%Y-%m-%d'))
     count.plot(kind="bar", grid=False, ax=ax)
@@ -742,7 +739,7 @@ def plot_missing_events_distribution(
     if full_dates is None:
         full_dates = events.index.get_level_values('date').unique()
 
-    daily_count = events.groupby(level='date').count()
+    daily_count = events.groupby(level='date',group_keys=False).count()
     most_common_count = np.argmax(np.bincount(daily_count))
     daily_missing = daily_count / most_common_count - 1
     daily_missing = daily_missing.reindex(full_dates, fill_value=-1.0)
@@ -750,7 +747,7 @@ def plot_missing_events_distribution(
     grouper = pd.Series(range(len(full_dates)), index=full_dates) // num_days
     grouper_label = grouper.drop_duplicates()
 
-    missing = daily_missing.groupby(grouper.values).mean()
+    missing = daily_missing.groupby(grouper.values,group_keys=False).mean()
     missing = missing.reindex(grouper_label.values, fill_value=-1.0)
     missing.index = grouper_label.index.map(lambda x: x.strftime('%Y-%m-%d'))
     missing.plot(kind="bar", grid=False, ax=ax)

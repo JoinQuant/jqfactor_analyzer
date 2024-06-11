@@ -84,7 +84,7 @@ def quantize_factor(
             raise ValueError('只有输入了 groupby 参数时 binning_by_group 才能为 True')
         grouper.append('group')
 
-    factor_quantile = factor_data.groupby(grouper)['factor'] \
+    factor_quantile = factor_data.groupby(grouper,group_keys=False)['factor'] \
         .apply(quantile_calc, quantiles, bins, zero_aware, no_raise)
     factor_quantile.name = 'factor_quantile'
 
@@ -168,7 +168,7 @@ def demean_forward_returns(factor_data, grouper=None):
 
     cols = get_forward_returns_columns(factor_data.columns)
     factor_data[cols] = factor_data.groupby(
-        grouper, as_index=False
+        grouper, as_index=False,group_keys=False
     )[cols.append(pd.Index(['weights']))].apply(
         lambda x: x[cols].subtract(
             np.average(x[cols], axis=0, weights=x['weights'].fillna(0.0).values),
@@ -300,7 +300,7 @@ def get_clean_factor(factor,
     if 'weights' in merged_data.columns:
         merged_data['weights'] = merged_data.set_index(
             'factor_quantile', append=True
-        ).groupby(level=['date', 'factor_quantile'])['weights'].apply(
+        ).groupby(level=['date', 'factor_quantile'],group_keys=False)['weights'].apply(
             lambda s: s.divide(s.sum())
         ).reset_index('factor_quantile', drop=True)
 
@@ -410,7 +410,7 @@ def common_start_returns(
 
     all_returns = []
 
-    for timestamp, df in factor.groupby(level='date'):
+    for timestamp, df in factor.groupby(level='date',group_keys=False):
 
         equities = df.index.get_level_values('asset')
 
@@ -428,8 +428,7 @@ def common_start_returns(
                 .index.get_level_values('asset')
             equities_slice |= set(demean_equities)
 
-        series = returns.loc[returns.
-                             index[starting_index:ending_index], equities_slice]
+        series = returns.loc[returns.index[starting_index:ending_index], list(equities_slice)]
         series.index = range(
             starting_index - day_zero_index, ending_index - day_zero_index
         )

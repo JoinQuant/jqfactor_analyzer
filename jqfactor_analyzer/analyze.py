@@ -477,7 +477,7 @@ class FactorAnalyzer(object):
         - False: 不分行业计算 IC
         by_time:
         - 'Y': 按年求均值
-        - 'M': 按月求均值
+        - 'ME': 按月求均值
         - None: 对所有日期求均值
         method:
         - 'rank': 用秩相关系数计算IC值
@@ -854,7 +854,7 @@ class FactorAnalyzer(object):
     def ic_monthly(self):
         ic_monthly = self.calc_mean_information_coefficient(group_adjust=False,
                                                             by_group=False,
-                                                            by_time="M").copy()
+                                                            by_time="ME").copy()
         ic_monthly.index = ic_monthly.index.map(lambda x: x.strftime('%Y-%m'))
         return ic_monthly
 
@@ -1165,7 +1165,7 @@ class FactorAnalyzer(object):
         - False: 不使用行业中性收益
         """
         ic_monthly = self.calc_mean_information_coefficient(
-            group_adjust=group_adjust, by_group=False, by_time="M"
+            group_adjust=group_adjust, by_group=False, by_time="ME"
         )
         pl.plot_monthly_ic_heatmap(ic_monthly)
 

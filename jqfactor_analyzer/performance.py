@@ -49,7 +49,7 @@ def factor_information_coefficient(
         grouper.append('group')
 
     with np.errstate(divide='ignore', invalid='ignore'):
-        ic = factor_data.groupby(grouper).apply(src_ic)
+        ic = factor_data.groupby(grouper,group_keys=False).apply(src_ic)
 
     return ic
 
@@ -98,7 +98,7 @@ def mean_information_coefficient(
         ic = ic.mean()
 
     else:
-        ic = (ic.reset_index().set_index('date').groupby(grouper).mean())
+        ic = (ic.reset_index().set_index('date').groupby(grouper,group_keys=False).mean())
 
     return ic
 
@@ -137,17 +137,17 @@ def factor_returns(factor_data, demeaned=True, group_adjust=False):
     if group_adjust:
         grouper.append('group')
 
-    weights = factor_data.groupby(grouper)['factor'] \
+    weights = factor_data.groupby(grouper,group_keys=False)['factor'] \
         .apply(to_weights, demeaned)
 
     if group_adjust:
-        weights = weights.groupby(level='date').apply(to_weights, False)
+        weights = weights.groupby(level='date',group_keys=False).apply(to_weights, False)
 
     weighted_returns = \
         factor_data[get_forward_returns_columns(factor_data.columns)] \
         .multiply(weights, axis=0)
 
-    returns = weighted_returns.groupby(level='date').sum()
+    returns = weighted_returns.groupby(level='date',group_keys=False).sum()
 
     return returns
 
@@ -178,7 +178,7 @@ def factor_alpha_beta(factor_data, demeaned=True, group_adjust=False):
 
     returns = factor_returns(factor_data, demeaned, group_adjust)
 
-    universe_ret = factor_data.groupby(level='date')[
+    universe_ret = factor_data.groupby(level='date',group_keys=False)[
         get_forward_returns_columns(factor_data.columns)] \
         .mean().loc[returns.index]
 
@@ -233,8 +233,7 @@ def cumulative_returns(returns, period):
     def split_portfolio(ret, period):
         return pd.DataFrame(np.diag(ret))
 
-    sub_portfolios = returns.groupby(
-        np.arange(len(returns.index)) // period, axis=0
+    sub_portfolios = returns.groupby(np.arange(len(returns.index)) // period, axis=0,group_keys=False
     ).apply(split_portfolio, period)
     sub_portfolios.index = returns.index
 
@@ -264,22 +263,27 @@ def weighted_mean_return(factor_data, grouper):
     """计算(年化)加权平均/标准差"""
     forward_returns_columns = get_forward_returns_columns(factor_data.columns)
 
-    def agg(values, weights):
-        count = len(values)
-        average = np.average(values, weights=weights, axis=0)
-        # Fast and numerically precise
-        variance = np.average(
-            (values - average)**2, weights=weights, axis=0
-        ) * count / max((count - 1), 1)
-        return pd.Series(
-            [average, np.sqrt(variance), count], index=['mean', 'std', 'count']
-        )
 
-    group_stats = factor_data.groupby(grouper)[
-        forward_returns_columns.append(pd.Index(['weights']))] \
-        .apply(lambda x: x[forward_returns_columns].apply(
-            agg, weights=x['weights'].fillna(0.0).values
-        ))
+    def agg(df):
+        count = df.shape[0]
+        average = np.average(df.iloc[:,:-1], weights=df.iloc[:,-1], axis=0)
+        # Fast and numerically precise
+        variance = np.average((df.iloc[:,:-1] - average)**2, weights=df.iloc[:,-1], axis=0
+        ) * count / max((count - 1), 1)
+        
+        # return format
+        _col_list = df.columns.to_list()[:-1]
+        ser_mean = pd.Series(average, index=_col_list, name='mean')
+        ser_std = pd.Series(np.sqrt(variance), index=_col_list,name='std')
+        ser_count = pd.Series(count, index=_col_list,name='count')
+        df_agg = pd.concat([ser_mean,ser_std, ser_count],axis=1).T
+        return df_agg
+    
+    factor_data2 = factor_data.copy()
+    factor_data2['weights'] = factor_data2['weights'].fillna(0)
+    col_list = forward_returns_columns.to_list()+['weights']
+    group_stats = factor_data2.groupby(grouper)[col_list].apply(agg)
+        
 
     mean_ret = group_stats.xs('mean', level=-1)
 
@@ -404,7 +408,7 @@ def quantile_turnover(quantile_factor, quantile, period=1):
 
     quant_names = quantile_factor[quantile_factor == quantile]
     quant_name_sets = quant_names.groupby(
-        level=['date']
+        level=['date'],group_keys=False
     ).apply(lambda x: set(x.index.get_level_values('asset')))
     new_names = (quant_name_sets - quant_name_sets.shift(period)).dropna()
     quant_turnover = new_names.apply(lambda x: len(x)) / quant_name_sets.apply(
@@ -437,7 +441,7 @@ def factor_autocorrelation(factor_data, period=1, rank=True):
     grouper = [factor_data.index.get_level_values('date')]
 
     if rank:
-        ranks = factor_data.groupby(grouper)[['factor']].rank()
+        ranks = factor_data.groupby(grouper,group_keys=False)[['factor']].rank()
     else:
         ranks = factor_data[['factor']]
     asset_factor_rank = ranks.reset_index().pivot(
@@ -509,7 +513,7 @@ def average_cumulative_return_by_quantile(
 
         returns_bygroup = []
 
-        for group, g_data in factor_data.groupby('group'):
+        for group, g_data in factor_data.groupby('group',group_keys=True):
             g_fq = g_data['factor_quantile']
             if group_adjust:
                 demean_by = g_fq  # demeans at group level
@@ -521,7 +525,7 @@ def average_cumulative_return_by_quantile(
             # Align cumulative return from different dates to the same index
             # then compute mean and std
             #
-            avgcumret = g_fq.groupby(g_fq).apply(
+            avgcumret = g_fq.groupby(g_fq,group_keys=True).apply(
                 average_cumulative_return, demean_by
             )
             avgcumret['group'] = group
@@ -534,9 +538,9 @@ def average_cumulative_return_by_quantile(
 
         if group_adjust:
             all_returns = []
-            for group, g_data in factor_data.groupby('group'):
+            for group, g_data in factor_data.groupby('group',group_keys=True):
                 g_fq = g_data['factor_quantile']
-                avgcumret = g_fq.groupby(g_fq).apply(cumulative_return, g_fq)
+                avgcumret = g_fq.groupby(g_fq,group_keys=True).apply(cumulative_return, g_fq)
                 all_returns.append(avgcumret)
             q_returns = pd.concat(all_returns, axis=1)
             q_returns = pd.DataFrame(
@@ -548,7 +552,7 @@ def average_cumulative_return_by_quantile(
             return q_returns.unstack(level=1).stack(level=0)
         elif demeaned:
             fq = factor_data['factor_quantile']
-            return fq.groupby(fq).apply(average_cumulative_return, fq)
+            return fq.groupby(fq,group_keys=True).apply(average_cumulative_return, fq)
         else:
             fq = factor_data['factor_quantile']
-            return fq.groupby(fq).apply(average_cumulative_return, None)
+            return fq.groupby(fq, group_keys=True).apply(average_cumulative_return, None)
