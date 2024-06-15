@@ -58,12 +58,10 @@ def quantize_factor(
     def quantile_calc(x, _quantiles, _bins, _zero_aware, _no_raise):
         try:
             if _quantiles is not None and _bins is None and not _zero_aware:
-                return pd.qcut(x, _quantiles, labels=False) + 1
+                return pd.qcut(x, _quantiles, labels=False, duplicates='drop') + 1
             elif _quantiles is not None and _bins is None and _zero_aware:
-                pos_quantiles = pd.qcut(x[x >= 0], _quantiles // 2,
-                                        labels=False) + _quantiles // 2 + 1
-                neg_quantiles = pd.qcut(x[x < 0], _quantiles // 2,
-                                        labels=False) + 1
+                pos_quantiles = pd.qcut(x[x >= 0], _quantiles // 2,labels=False, duplicates='drop') + _quantiles // 2 + 1
+                neg_quantiles = pd.qcut(x[x < 0], _quantiles // 2,labels=False, duplicates='drop') + 1
                 return pd.concat([pos_quantiles, neg_quantiles]).sort_index()
             elif _bins is not None and _quantiles is None and not _zero_aware:
                 return pd.cut(x, _bins, labels=False) + 1
@@ -117,7 +115,7 @@ def compute_forward_returns(factor,
     """
 
     factor_dateindex = factor.index.levels[0]
-    factor_dateindex = factor_dateindex.intersection(prices.index)
+    factor_dateindex = pd.to_datetime(factor_dateindex).intersection(prices.index)
 
     if len(factor_dateindex) == 0:
         raise ValueError("Factor and prices indices don't match: make sure "
