@@ -143,7 +143,8 @@ def plot_ic_hist(ic, ax=None):
 
     for a, (period, ic) in zip(ax, ic.items()):
         period_num = period.replace('period_', '')
-        sns.distplot(ic.replace(np.nan, 0.), norm_hist=True, ax=a)
+        # sns.distplot(ic.replace(np.nan, 0.), norm_hist=True, ax=a)
+        sns.histplot(ic.replace(np.nan, 0.), kde=True, ax=a, stat="density")
         a.set_xlim([-1, 1])
         a.set(title=ICHIST.get("TITLE") % period_num, xlabel='IC')
         a.text(
