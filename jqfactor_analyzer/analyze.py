@@ -477,7 +477,7 @@ class FactorAnalyzer(object):
         - False: 不分行业计算 IC
         by_time:
         - 'Y': 按年求均值
-        - 'M': 按月求均值
+        - 'ME': 按月求均值
         - None: 对所有日期求均值
         method:
         - 'rank': 用秩相关系数计算IC值
@@ -608,7 +608,12 @@ class FactorAnalyzer(object):
             group_adjust=group_adjust, by_group=by_group,
             method=method
         )
-        return ac.mean(level=('group' if by_group else None))
+        if by_group:
+            _mean = ac.groupby(level='group').mean()
+        else:
+            _mean = ac.mean()
+        # return ac.mean(level=('group' if by_group else None))
+        return _mean
 
     def calc_ic_mean_n_days_lag(self, n=10, group_adjust=False, by_group=False, method=None):
         """滞后 0 - n 天因子收益信息比率(IC)的均值
@@ -627,9 +632,15 @@ class FactorAnalyzer(object):
         - 'rank': 用秩相关系数计算IC值
         - 'normal': 用普通相关系数计算IC值
         """
-        ic_mean = [self.calc_factor_information_coefficient(
-            group_adjust=group_adjust, by_group=by_group, method=method,
-        ).mean(level=('group' if by_group else None))]
+        df_coef = self.calc_factor_information_coefficient(group_adjust=group_adjust, by_group=by_group, method=method)
+        if by_group:
+            _mean = df_coef.groupby(level='group').mean()
+        else:
+            _mean = df_coef.mean()
+        ic_mean = [_mean]
+        # ic_mean = [self.calc_factor_information_coefficient(
+        #     group_adjust=group_adjust, by_group=by_group, method=method,
+        # ).mean(level=('group' if by_group else None))]
 
         for lag in range(1, n + 1):
             ic_mean.append(self._calc_ic_mean_n_day_lag(
@@ -854,7 +865,7 @@ class FactorAnalyzer(object):
     def ic_monthly(self):
         ic_monthly = self.calc_mean_information_coefficient(group_adjust=False,
                                                             by_group=False,
-                                                            by_time="M").copy()
+                                                            by_time="ME").copy()
         ic_monthly.index = ic_monthly.index.map(lambda x: x.strftime('%Y-%m'))
         return ic_monthly
 
@@ -1165,7 +1176,7 @@ class FactorAnalyzer(object):
         - False: 不使用行业中性收益
         """
         ic_monthly = self.calc_mean_information_coefficient(
-            group_adjust=group_adjust, by_group=False, by_time="M"
+            group_adjust=group_adjust, by_group=False, by_time="ME"
         )
         pl.plot_monthly_ic_heatmap(ic_monthly)
 

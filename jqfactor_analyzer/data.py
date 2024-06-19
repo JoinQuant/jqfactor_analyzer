@@ -187,6 +187,9 @@ class DataApi(object):
 
     def get_prices(self, securities, start_date=None, end_date=None,
                    period=None):
+        '''
+        调用jqdatasdk.get_price函数，并转换成因子格式，{index:day,column:code,values:price}
+        '''
         if period is not None:
             trade_days = self._get_trade_days(start_date=end_date)
             if len(trade_days):
@@ -202,18 +205,18 @@ class DataApi(object):
     def _get_industry(self, securities, start_date, end_date,
                       industry='jq_l1'):
         trade_days = self._get_trade_days(start_date, end_date)
-        industries = map(partial(self.api.get_industry, securities), trade_days)
-
+        
+        day_ind_dict = {day:self.api.get_industry(securities,day) for day in trade_days}
         industries = {
-            d: {
-                s: ind.get(s).get(industry, dict()).get('industry_name', 'NA')
-                for s in securities
-            }
-            for d, ind in zip(trade_days, industries)
-        }
-        return pd.DataFrame(industries).T.sort_index()
+            day:{code:ind.get(industry, dict()).get('industry_name', 'NA') for code,ind in ind_dict.items()}
+            for day,ind_dict in day_ind_dict.items()}
+        df_ind = pd.DataFrame(industries).T.sort_index()
+        return df_ind 
 
     def get_groupby(self, securities, start_date, end_date):
+        '''
+        get industry func for every code and day
+        '''
         return self._get_industry(securities=securities,
                                   start_date=start_date, end_date=end_date,
                                   industry=self.industry)
@@ -279,6 +282,15 @@ class DataApi(object):
         return {sec: 1.0 for sec in securities}
 
     def get_weights(self, securities, start_date, end_date):
+        '''
+        计算各分位收益时, 每只股票权重, 默认为 'avg' 
+            - 'avg': 等权重
+            - 'mktcap': 按总市值加权
+            - 'ln_mktcap': 按总市值的对数加权
+            - 'cmktcap': 按流通市值加权
+            - 'ln_cmktcap': 按流通市值的对数加权
+        ''' 
+        
         start_date = date2str(start_date)
         end_date = date2str(end_date)
 
@@ -295,8 +307,9 @@ class DataApi(object):
         else:
             raise ValueError('invalid weight_method')
 
-        return weight_api(securities=securities, start_date=start_date,
-                          end_date=end_date)
+
+        weights = weight_api(securities=securities, start_date=start_date,end_date=end_date)
+        return weights
 
     @property
     def apis(self):

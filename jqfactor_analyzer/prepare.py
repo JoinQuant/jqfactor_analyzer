@@ -58,12 +58,10 @@ def quantize_factor(
     def quantile_calc(x, _quantiles, _bins, _zero_aware, _no_raise):
         try:
             if _quantiles is not None and _bins is None and not _zero_aware:
-                return pd.qcut(x, _quantiles, labels=False) + 1
+                return pd.qcut(x, _quantiles, labels=False, duplicates='drop') + 1
             elif _quantiles is not None and _bins is None and _zero_aware:
-                pos_quantiles = pd.qcut(x[x >= 0], _quantiles // 2,
-                                        labels=False) + _quantiles // 2 + 1
-                neg_quantiles = pd.qcut(x[x < 0], _quantiles // 2,
-                                        labels=False) + 1
+                pos_quantiles = pd.qcut(x[x >= 0], _quantiles // 2,labels=False, duplicates='drop') + _quantiles // 2 + 1
+                neg_quantiles = pd.qcut(x[x < 0], _quantiles // 2,labels=False, duplicates='drop') + 1
                 return pd.concat([pos_quantiles, neg_quantiles]).sort_index()
             elif _bins is not None and _quantiles is None and not _zero_aware:
                 return pd.cut(x, _bins, labels=False) + 1
@@ -84,7 +82,7 @@ def quantize_factor(
             raise ValueError('只有输入了 groupby 参数时 binning_by_group 才能为 True')
         grouper.append('group')
 
-    factor_quantile = factor_data.groupby(grouper)['factor'] \
+    factor_quantile = factor_data.groupby(grouper,group_keys=False)['factor'] \
         .apply(quantile_calc, quantiles, bins, zero_aware, no_raise)
     factor_quantile.name = 'factor_quantile'
 
@@ -117,7 +115,7 @@ def compute_forward_returns(factor,
     """
 
     factor_dateindex = factor.index.levels[0]
-    factor_dateindex = factor_dateindex.intersection(prices.index)
+    factor_dateindex = pd.to_datetime(factor_dateindex).intersection(prices.index)
 
     if len(factor_dateindex) == 0:
         raise ValueError("Factor and prices indices don't match: make sure "
@@ -168,7 +166,7 @@ def demean_forward_returns(factor_data, grouper=None):
 
     cols = get_forward_returns_columns(factor_data.columns)
     factor_data[cols] = factor_data.groupby(
-        grouper, as_index=False
+        grouper, as_index=False,group_keys=False
     )[cols.append(pd.Index(['weights']))].apply(
         lambda x: x[cols].subtract(
             np.average(x[cols], axis=0, weights=x['weights'].fillna(0.0).values),
@@ -300,7 +298,7 @@ def get_clean_factor(factor,
     if 'weights' in merged_data.columns:
         merged_data['weights'] = merged_data.set_index(
             'factor_quantile', append=True
-        ).groupby(level=['date', 'factor_quantile'])['weights'].apply(
+        ).groupby(level=['date', 'factor_quantile'],group_keys=False)['weights'].apply(
             lambda s: s.divide(s.sum())
         ).reset_index('factor_quantile', drop=True)
 
@@ -410,7 +408,7 @@ def common_start_returns(
 
     all_returns = []
 
-    for timestamp, df in factor.groupby(level='date'):
+    for timestamp, df in factor.groupby(level='date',group_keys=False):
 
         equities = df.index.get_level_values('asset')
 
@@ -428,8 +426,7 @@ def common_start_returns(
                 .index.get_level_values('asset')
             equities_slice |= set(demean_equities)
 
-        series = returns.loc[returns.
-                             index[starting_index:ending_index], equities_slice]
+        series = returns.loc[returns.index[starting_index:ending_index], list(equities_slice)]
         series.index = range(
             starting_index - day_zero_index, ending_index - day_zero_index
         )
