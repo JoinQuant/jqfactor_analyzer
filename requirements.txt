@@ -4,8 +4,10 @@ SQLAlchemy>=1.2.8
 cached_property>=1.5.1
 statsmodels
 scipy
-numpy>=1.9.2
-pandas>=0.16.2
+numpy>=1.15.0
+pandas>=1.0.0
+tqdm>=4.64.1
 matplotlib
 seaborn
 jqdatasdk
+pyarrow

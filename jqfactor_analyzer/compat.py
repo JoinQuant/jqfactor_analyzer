@@ -69,3 +69,12 @@ def rolling_std(x, window, min_periods=None, center=False, ddof=1):
         return pd.rolling_std(
             x, window, min_periods=min_periods, center=center, ddof=ddof
         )
+
+
+# statsmodels
+with warnings.catch_warnings():
+    # 有的版本依赖的 pandas 库会有 deprecated warning
+    warnings.simplefilter("ignore")
+    import statsmodels
+    from statsmodels.api import OLS, qqplot, ProbPlot
+    from statsmodels.tools.tools import add_constant

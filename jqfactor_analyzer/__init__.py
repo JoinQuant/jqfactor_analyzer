@@ -7,7 +7,7 @@ from .data import DataApi
 
 def analyze_factor(
     factor, industry='jq_l1', quantiles=5, periods=(1, 5, 10),
-    weight_method='avg', max_loss=0.25
+    weight_method='avg', max_loss=0.25 , allow_cache=True, show_data_progress=True
 ):
     """单因子分析
 
@@ -31,9 +31,13 @@ def analyze_factor(
             - 'cmktcap': 按流通市值加权
             - 'ln_cmktcap': 按流通市值的对数加权
         max_loss: 因重复值或nan值太多而无效的因子值的最大占比, 默认为 0.25
+        allow_cache: 是否允许对价格,市值等信息进行本地缓存(按天缓存,初次运行可能比较慢,但后续重新获取对应区间的数据将非常快,且分析时仅消耗较小的jqdatasdk流量)
+        show_data_progress: 是否展示数据获取的进度信息
+
     """
 
-    dataapi = DataApi(industry=industry, weight_method=weight_method)
+    dataapi = DataApi(industry=industry, weight_method=weight_method,
+                      allow_cache=allow_cache, show_progress=show_data_progress)
     return FactorAnalyzer(factor,
                           quantiles=quantiles,
                           periods=periods,

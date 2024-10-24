@@ -39,7 +39,7 @@ def plot_returns_table(alpha_beta, mean_ret_quantile, mean_ret_spread_quantile):
     print_table(returns_table.apply(lambda x: x.round(3)))
 
 
-def plot_turnover_table(autocorrelation_data, quantile_turnover):
+def plot_turnover_table(autocorrelation_data, quantile_turnover, return_df=False):
     turnover_table = pd.DataFrame()
     for period in sorted(quantile_turnover.keys()):
         for quantile, p_data in quantile_turnover[period].iteritems():
@@ -50,12 +50,15 @@ def plot_turnover_table(autocorrelation_data, quantile_turnover):
         auto_corr.loc["Mean Factor Rank Autocorrelation", "{}"
                       .format(period)] = p_data.mean()
 
-    print("换手率分析")
-    print_table(turnover_table.apply(lambda x: x.round(3)))
-    print_table(auto_corr.apply(lambda x: x.round(3)))
+    if return_df:
+        return turnover_table.apply(lambda x: x.round(3)), auto_corr.apply(lambda x: x.round(3))
+    else:
+        print("换手率分析")
+        print_table(turnover_table.apply(lambda x: x.round(3)))
+        print_table(auto_corr.apply(lambda x: x.round(3)))
 
 
-def plot_information_table(ic_data):
+def plot_information_table(ic_data, return_df=False):
     ic_summary_table = pd.DataFrame()
     ic_summary_table["IC Mean"] = ic_data.mean()
     ic_summary_table["IC Std."] = ic_data.std()
@@ -66,18 +69,24 @@ def plot_information_table(ic_data):
     ic_summary_table["IC Skew"] = stats.skew(ic_data)
     ic_summary_table["IC Kurtosis"] = stats.kurtosis(ic_data)
 
-    print("IC 分析")
-    print_table(ic_summary_table.apply(lambda x: x.round(3)).T)
+    if return_df:
+        return ic_summary_table.apply(lambda x: x.round(3)).T
+    else:
+        print("IC 分析")
+        print_table(ic_summary_table.apply(lambda x: x.round(3)).T)
 
 
-def plot_quantile_statistics_table(factor_data):
+def plot_quantile_statistics_table(factor_data, return_df=False):
     quantile_stats = factor_data.groupby('factor_quantile') \
         .agg(['min', 'max', 'mean', 'std', 'count'])['factor']
     quantile_stats['count %'] = quantile_stats['count'] \
         / quantile_stats['count'].sum() * 100.
 
-    print("分位数统计")
-    print_table(quantile_stats)
+    if return_df:
+        return quantile_stats
+    else:
+        print("分位数统计")
+        print_table(quantile_stats)
 
 
 @customize
