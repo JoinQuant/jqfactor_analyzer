@@ -3,11 +3,13 @@
 from .version import __version__
 from .analyze import FactorAnalyzer
 from .data import DataApi
+from .preprocess import winsorize, winsorize_med, standardlize, neutralize
+from .factor_cache import save_factor_valeus_by_group, get_factor_values_by_cache, get_cache_dir
 
 
 def analyze_factor(
     factor, industry='jq_l1', quantiles=5, periods=(1, 5, 10),
-    weight_method='avg', max_loss=0.25 , allow_cache=True, show_data_progress=True
+    weight_method='avg', max_loss=0.25, allow_cache=True, show_data_progress=True
 ):
     """单因子分析
 

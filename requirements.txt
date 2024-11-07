@@ -6,7 +6,6 @@ statsmodels
 scipy
 numpy>=1.15.0
 pandas>=1.0.0
-tqdm>=4.64.1
 matplotlib
 seaborn
 jqdatasdk
