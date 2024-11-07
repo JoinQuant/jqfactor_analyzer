@@ -1,3 +1,4 @@
 include LICENSE
 include *.txt
 include jqfactor_analyzer/sample_data/*.csv
+include jqfactor_analyzer/config.json

@@ -66,7 +66,7 @@ setup_args = dict(
     ],
     install_requires=requirements,
     include_package_data=True,
-    package_data={'jqfactor_analyzer': ['jqfactor_analyzer/sample_data/*.csv']},
+    package_data={'jqfactor_analyzer': ['jqfactor_analyzer/sample_data/*.csv', 'jqfactor_analyzer/config.json']},
 )
 
 
