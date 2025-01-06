@@ -68,7 +68,7 @@ class FactorAnalyzer(object):
             int or sequence[float]
             默认为 None
             在因子分组中按照因子值大小平均分组的组数
-            或分位数序列, 允许不均匀分组.
+            或分位数序列, 允许不均匀分组.
             例如 [0, .10, .5, .90, 1.] 或 [.05, .5, .95]
             'quantiles' 和 'bins' 有且只能有一个不为 None
         bins :

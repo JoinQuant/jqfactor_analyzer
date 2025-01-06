@@ -1,10 +1,245 @@
-
 # **API文档**
 
-## 因子分析函数
+## 一、因子缓存factor_cache模块
+
+为了在本地进行分析时，为了提高数据获取的速度并避免反复从服务端获取数据，所以增加了本地数据缓存的方法。
+
+注意缓存格式为pyarrow.feather格式，pyarrow库不同版本之间可能存在兼容问题，建议不要随意修改pyarrow库的版本，如果修改后产生大量缓存文件无法读取(提示已损坏)的情况，建议删除整个缓存目录后重新缓存。
+
+### 1. 设置缓存目录
+
+对于单因子分析和归因分析中使用到的市值/价格和风格因子等数据，默认会缓存到用户的主目录( `os.path.expanduser( '~/jqfactor_datacache/bundle')` )。 一般地，在 Unix 系统上可能是 `/home/username/jqfactor_datacache/bundle`，而在 Windows 系统上可能是 `C:\Users\username\jqfactor_datacache\bundle`。
+
+您可以通过以下代码修改配置信息来设置为其他路径，设置过一次后后续都将沿用设置的这个路径，不用重复设置。
 
 ```python
-analyze_factor(factor, industry='jq_l1', quantiles=5, periods=(1, 5, 10), weight_method='avg', max_loss=0.25)
+from jqfactor_analyzer.factor_cache import set_cache_dir,get_cache_dir
+set_cache_dir(my_path) #设置缓存目录为my_path
+print(get_cache_dir()) #输出缓存目录
+```
+
+### 2. 缓存/检查缓存和读取已缓存数据
+
+除过对单因子分析及归因分析依赖的数据进行缓存外，factor_cache还可以缓存自定义的因子组(仅限聚宽因子库中支持的因子)
+
+```python
+def save_factor_values_by_group(start_date,end_date,factor_names='prices',
+				group_name=None,overwrite=False,cache_dir=None,show_progress=True):
+    """将因子库数据按因子组储存到本地,根据factor_names因子列表(顺序无关)自动生成因子组的名称
+    start_date : 开始时间
+    end_date : 结束时间
+    factor_names : 因子组所含因子的名称,除过因子库中支持的因子外，还支持指定为'prices'缓存价格数据
+    group_name : 因子组名称，不指定时使用get_factor_folder自动生成因子组名(即缓存文件夹名)，如果指定则按照指定的名称生成文件夹名(使用get_factor_values_by_cache时,需要自行指定factor_path)
+    overwrite  : 文件已存在时是否覆盖更新,默认为False即增量更新,文件已存在时跳过
+    cache_dir : 缓存的路径，如果没有指定则使用配置信息中的路径,一般不用指定
+    show_progress : 是否展示缓存进度,默认为True
+    返回 : 因子组储存的路径 , 文件以天为单位储存为feather文件,每天一个feather文件,每月一个文件夹,columns为因子名称, index为当天在市的所有标的代码
+    """
+def get_factor_values_by_cache(date,codes=None,factor_names=None,group_name=None,
+								factor_path=None):
+    """从缓存的文件读取因子数据,文件不存在时返回空的dataframe
+    date : 日期
+    codes : 标的代码,默认为None获取当天在市的所有标的
+    factor_names : 因子列表(顺序无关),当指定factor_path/group_name时失效
+    group_name : 因子组名,如果缓存时指定了group_name,则获取时必须也指定group_name或factor_path
+    factor_path : 可选参数,因子组的路径,一般不用指定
+    返回:
+    如果缓存文件存在，则返回当天的因子数据,index是标的代码,columns是因子名
+    如果缓存文件不存在,则返回空的dataframe, 建议在使用get_factor_values_by_cache前,先运行save_factor_values_by_group检查时间区间内的缓存文件是否完整
+    """
+def get_factor_folder(factor_names,group_name=None):
+    """获取因子组的文件夹名(文件夹位于get_cache_dir()获取的缓存目录下)
+    factor_names : 因子储存时,如果未指定group_name,则根据因子列表(顺序无关)获取md5值生成因子组名(即储存的文件夹名)，使用此方法可以获取生成的文件夹名称
+    group_name : 如果储存时指定了因子组名,则直接返回此因子组名
+    """
+
+```
+
+**示例**
+
+```python
+from jqfactor_analyzer.factor_cache import save_factor_values_by_group,get_factor_values_by_cache,get_factor_folder,get_cache_dir
+# import jqdatasdk as jq
+# jq.auth("账号",'密码') #登陆jqdatasdk来从服务端缓存数据
+
+all_factors = jq.get_all_factors()
+factor_names = all_factors[all_factors.category=='growth'].factor.tolist()  #将聚宽因子库中的成长类因子作为一组因子
+group_name = 'growth_factors' #因子组名定义为'growth_factors'
+start_date = '2021-01-01'
+end_date = '2021-06-01'
+# 检查/缓存因子数据
+factor_path = save_factor_values_by_group(start_date,end_date,factor_names=factor_names,group_name=group_name,overwrite=False,show_progress=True)
+# factor_path = os.path.join(get_cache_dir(), get_factor_folder(factor_names,group_name=group_name)  #等同于save_factor_values_by_group返回的路径
+
+# 循环获取缓存的因子数据,并拼接
+trade_days = jq.get_trade_days(start_date,end_date)
+factor_values = {}
+for date in trade_days:
+    factor_values[date] = get_factor_values_by_cache(date,codes=None,factor_names=factor_names,group_name=group_name, factor_path=factor_path)#这里实际只需要指定group_name,factor_names参数的其中一个,缓存时指定了group_name时,factor_names不生效
+factor_values = pd.concat(factor_values)
+```
+
+## 二、归因分析模块
+
+```python
+from jqfactor_analyzer import AttributionAnalysis
+AttributionAnalysis(weights,daily_return,style_type='style_pro',industry ='sw_l1',use_cn=True,show_data_progress=True)
+```
+
+**参数 :**
+
+- `weights`:持仓权重信息，index是日期，columns是标的代码， value对应的是组合当天的仓位占比(单日仓位占比总和不为1时，剩余部分认为是当天的现金)
+-  `daily_return`:Series,index是日期，values为当天组合的收益率
+-  `style_type`:归因分析所使用的风格因子类型，可选'style'和'style_pro'中的一个
+-  `industry`:归因分析所使用的行业分类，可选'sw_l1'和'jq_l1'中的一个
+-  `use_cn`:绘图时是否使用中文
+-  `show_data_progress`:是否展示数据获取进度(使用本地缓存,第一次运行时速度较慢,后续对于本地不存在的数据将增量缓存)
+
+**示例**
+
+```python
+import pandas as pd
+# position_weights.csv 是一个储存了组合权重信息的csv文件,index是日期,columns是股票代码
+# position_daily_return.csv 是一个储存了组合日收益率的csv文件,index是日期,daily_return列是日收益
+weights = pd.read_csv("position_weights.csv",index_col=0)
+returns = pd.read_csv("position_daily_return.csv",index_col=0)['daily_return']
+
+An =  AttributionAnalysis(weights , returns ,style_type='style_pro',industry ='sw_l1', show_data_progress=True )
+```
+
+
+
+### 1. 属性
+
+- `style_exposure` : 组合的风格暴露
+- `industry_exposure` : 组合的行业暴露
+- `exposure_portfolio` : 组合的风格+行业及country暴露
+- `attr_daily_returns` : 组合的\风格+行业及country日度归因收益率
+- `attr_returns` : 组合的日度风格+行业及country累积归因收益率
+
+### 2. 方法
+
+#### (1) 获取组合相对于指数的暴露
+
+```python
+get_exposure2bench(index_symbol)
+```
+
+**参数 :**
+
+- `index_symbol` : 基准指数, 可选`['000300.XSHG','000905.XSHG','000906.XSHG','000852.XSHG','932000.CSI','000985.XSHG']`中的一个
+
+**返回 :**
+
+- 一个dataframe,index为日期,columns为风格因子+行业因子+county , 其中country为股票总持仓占比
+
+#### (2) 获取组合相对于指数的日度归因收益率
+
+```python
+get_attr_daily_returns2bench(index_symbol)
+```
+
+假设组合相对于指数的收益由以下部分构成 : 风格+行业暴露收益(common_return ) , 现金闲置收益(cash) ,策略本身的超额收益(specific_return)
+**参数 :**
+
+- `index_symbol` : 基准指数, 可选`['000300.XSHG','000905.XSHG','000906.XSHG','000852.XSHG','932000.CSI','000985.XSHG']`中的一个
+
+**返回 :**
+
+- 一个dataframe,index为日期,columns为`风格因子+行业因子+cash+common_return,specific_return,total_return`
+
+  其中:
+  cash是假设现金收益(0)相对指数带来的收益率
+  common_return 为风格+行业总收益率
+  specific_return 为特意收益率
+  total_return 为组合相对于指数的总收益
+
+#### (3) 获取相对于指数的累积归因收益率
+
+```python
+get_attr_returns2bench(index_symbol)
+```
+
+假设组合相对于指数的收益由以下部分构成 : 风格+行业暴露收益(common_return ) , 现金闲置收益(cash) ,策略本身的超额收益(specific_return)
+
+**参数 :**
+
+ `index_symbol` : 基准指数, 可选`['000300.XSHG','000905.XSHG','000906.XSHG','000852.XSHG','932000.CSI','000985.XSHG']`中的一个
+
+**返回 :**
+
+- 一个dataframe,index为日期,columns为`风格因子+行业因子+cash+common_return,specific_return,total_return`
+
+  其中:
+  cash是假设现金收益(0)相对指数带来的收益率
+  common_return 为风格+行业总收益率
+  specific_return 为特异收益率
+  total_return 为组合相对于指数的总收益(减法超额)
+
+### 3. 绘图方法
+
+#### (1) 绘制风格暴露时序图
+
+```python
+plot_exposure(factors='style',index_symbol=None,figsize=(15,7))
+```
+
+绘制风格暴露时序
+
+**参数**
+
+- factors : 绘制的暴露类型 , 可选 'style'(所有风格因子) , 'industry'(所有行业因子),也可以传递一个list,list为exposure_portfolio中columns的一个或者多个
+- index_symbol : 基准指数代码,指定时绘制相对于指数的暴露 , 默认None为组合本身的暴露
+- figsize : 画布大小
+
+#### (2) 绘制归因分析收益时序图
+
+```python
+plot_returns(factors='style',index_symbol=None,figsize=(15,7))
+```
+
+绘制归因分析收益时序
+
+**参数**
+
+- factors : 绘制的暴露类型 , 可选 'style'(所有风格因子) , 'industry'(所有行业因子),也可以传递一个list,list为exposure_portfolio中columns的一个或者多个
+  同时也支持指定['common_return'(风格总收益),'specific_return'(特异收益),'total_return'(总收益)', 'country'(国家因子收益,当指定index_symbol时会用现金相对于指数的收益替代)]
+- index_symbol : 基准指数代码,指定时绘制相对于指数的暴露 , 默认None为组合本身的暴露
+- figsize : 画布大小
+
+#### (3) 绘制暴露与收益对照图
+
+```python
+plot_exposure_and_returns(factors='style',index_symbol=None,show_factor_perf=False,figsize=(12,6))
+```
+
+将因子暴露与收益同时绘制在多个子图上
+
+**参数**
+
+-  factors : 绘制的暴露类型 , 可选 'style'(所有风格因子) , 'industry'(所有行业因子),也可以传递一个list,list为exposure_portfolio中columns的一个或者多个
+  当指定index_symbol时,country会用现金相对于指数的收益替代)
+- index_symbol : 基准指数代码,指定时绘制相对于指数的暴露及收益 , 默认None为组合本身的暴露和收益
+- show_factor_perf : 是否同时绘制因子表现
+- figsize : 画布大小,这里第一个参数是画布的宽度, 第二个参数为单个子图的高度
+
+#### (4) 关闭中文图例显示
+
+```python
+plot_exposure_and_returns()
+```
+
+ 画图时默认会从系统中查找中文字体显示以中文图例
+ 如果找不到中文字体则默认使用英文图例
+ 当找到中文字体但中文显示乱码时, 可调用此 API 关闭中文图例显示而使用英文
+
+
+
+## 三、单因子分析模块
+
+```python
+from jqfactor_analyzer import analyze_factor
+analyze_factor(factor, industry='jq_l1', quantiles=5, periods=(1, 5, 10), weight_method='avg', max_loss=0.25, allow_cache=True, show_data_progress=True )
 ```
 
 单因子分析函数
@@ -66,6 +301,10 @@ analyze_factor(factor, industry='jq_l1', quantiles=5, periods=(1, 5, 10), weight
 
   或者因为分组失败, 因此可以部分地丢弃因子数据
 
+* `allow_cache` : 是否允许对价格,市值等信息进行本地缓存(按天缓存,初次运行可能比较慢,但后续重新获取对应区间的数据将非常快,且分析时仅消耗较小的jqdatasdk流量)
+
+* show_data_progress: 是否展示数据获取的进度信息
+
 
 
 **示例**
@@ -104,7 +343,7 @@ far.create_full_tear_sheet(
 
 
 
-### 绘制结果
+### 1. 绘制结果
 
 #### 展示全部分析
 
@@ -492,7 +731,7 @@ far.plot_disable_chinese_label()
 
 
 
-### 属性列表
+### 2. 属性列表
 
 用于访问因子分析的结果，大部分为惰性属性，在访问才会计算结果并返回
 
@@ -890,7 +1129,7 @@ far.calc_ic_mean_n_days_lag(n=10,group_adjust=False,by_group=False,method=None)
 
 
 
-## 获取聚宽因子库数据的方法
+### 3. 获取聚宽因子库数据的方法
 
 1. [聚宽因子库](https://www.joinquant.com/help/api/help?name=factor_values)包含数百个质量、情绪、风险等其他类目的因子
 
@@ -911,7 +1150,7 @@ far.calc_ic_mean_n_days_lag(n=10,group_adjust=False,by_group=False,method=None)
 
 
 
-## 将自有因子值转换成 DataFrame 格式的数据
+### 4. 将自有因子值转换成 DataFrame 格式的数据
 
 - index 为日期，格式为 pandas 日期通用的 DatetimeIndex
 
@@ -983,3 +1222,98 @@ far.calc_ic_mean_n_days_lag(n=10,group_adjust=False,by_group=False,method=None)
 
     # 之后请按照 DataFrame 的方法转换成满足格式要求数据格式
     ```
+
+## 四、数据处理函数
+
+#### 1.  中性化
+
+```python
+from jqfactor_analyzer import neutralize
+neutralize(data, how=None, date=None, axis=1, fillna=None, add_constant=False)
+```
+
+**参数 :**
+
+- data: pd.Series/pd.DataFrame, 待中性化的序列, 序列的 index/columns 为股票的 code
+- how: str list. 中性化使用的因子名称列表.
+  默认为 ['jq_l1', 'market_cap'], 支持的中性化方法有:
+  (1) 行业: sw_l1, sw_l2, sw_l3, jq_l1, jq_l2
+  (2) mktcap(总市值), ln_mktcap(对数总市值), cmktcap(流通市值), ln_cmktcap(对数流通市值)
+  (3)自定义的中性化数据: 支持同时传入额外的 Series 或者 DataFrame 用来进行中性化, index 必须是标的代码
+  数列表。
+- date: 日期, 将用 date 这天的相关变量数据对 series 进行中性化 (注意依赖数据的实际可用时间, 如市值数据当天盘中是无法获取到的)
+- axis: 默认为 1. 仅在 data 为 pd.DataFrame 时生效. 表示沿哪个方向做中性化, 0 为对每列做中性化, 1 为对每行做中性化
+- fillna: 缺失值填充方式, 默认为None, 表示不填充. 支持的值:
+          'jq_l1': 聚宽一级行业
+          'jq_l2': 聚宽二级行业
+          'sw_l1': 申万一级行业
+          'sw_l2': 申万二级行业
+          'sw_l3': 申万三级行业 表示使用某行业分类的均值进行填充.
+-  add_constant: 中性化时是否添加常数项, 默认为 False
+
+**返回 :**
+
+- 中性化后的因子数据
+
+
+
+#### 2.  去极值
+
+```python
+from jqfactor_analyzer import winsorize
+winsorize(data, scale=None, range=None, qrange=None, inclusive=True, inf2nan=True, axis=1)
+```
+
+**参数 :**
+
+- data: pd.Series/pd.DataFrame/np.array, 待缩尾的序列
+- scale: 标准差倍数，与 range，qrange 三选一，不可同时使用。会将位于 [mu - scale * sigma, mu + scale * sigma] 边界之外的值替换为边界值
+- range: 列表， 缩尾的上下边界。与 scale，qrange 三选一，不可同时使用。
+- qrange: 列表，缩尾的上下分位数边界，值应在 0 到 1 之间，如 [0.05, 0.95]。与 scale，range 三选一，不可同时使用。
+- inclusive: 是否将位于边界之外的值替换为边界值，默认为 True。如果为 True，则将边界之外的值替换为边界值，否则则替换为 np.nan
+- inf2nan: 是否将 np.inf 和 -np.inf 替换成 np.nan，默认为 True如果为 True，在缩尾之前会先将 np.inf 和 -np.inf 替换成 np.nan，缩尾的时候不会考虑 np.nan，否则 inf 被认为是在上界之上，-inf 被认为在下界之下
+- axis: 在 data 为 pd.DataFrame 时使用，沿哪个方向做标准化，默认为 1。 0 为对每列做缩尾，1 为对每行做缩尾。
+
+**返回 :**
+
+- 去极值处理之后的因子数据
+
+
+
+#### 3.  中位数去极值
+
+```python
+from jqfactor_analyzer import winsorize_med
+winsorize_med(data, scale=1, inclusive=True, inf2nan=True, axis=1)
+```
+
+**参数 :**
+
+- data: pd.Series/pd.DataFrame/np.array, 待缩尾的序列
+- scale: 倍数，默认为 1.0。会将位于 [med - scale * distance, med + scale * distance] 边界之外的值替换为边界值/np.nan
+- inclusive bool 是否将位于边界之外的值替换为边界值，默认为 True。 如果为 True，则将边界之外的值替换为边界值，否则则替换为 np.nan
+- inf2nan: 是否将 np.inf 和 -np.inf 替换成 np.nan，默认为 True。如果为 True，在缩尾之前会先将 np.inf 和 -np.inf 替换成 np.nan，缩尾的时候不会考虑 np.nan，否则 inf 被认为是在上界之上，-inf 被认为在下界之下
+- axis: 在 data 为 pd.DataFrame 时使用，沿哪个方向做标准化，默认为 1。0 为对每列做缩尾，1 为对每行做缩尾
+
+**返回 :**
+
+- 中位数去极值之后的因子数据
+
+
+
+#### 4.  标准化(z-score)
+
+```python
+from jqfactor_analyzer import standardlize
+standardlize(data, inf2nan=True, axis=1)
+```
+
+**参数 :**
+
+- data: pd.Series/pd.DataFrame/np.array, 待标准化的序列
+- inf2nan: 是否将 np.inf 和 -np.inf 替换成 np.nan。默认为 True
+- axis=1: 在 data 为 pd.DataFrame 时使用，如果 series 为 pd.DataFrame，沿哪个方向做标准化。0 为对每列做标准化，1 为对每行做标准化
+
+**返回 :**
+
+- 标准化后的因子数据

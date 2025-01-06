@@ -9,9 +9,8 @@ from jqfactor_analyzer.factor_cache import *
 try:
     import jqdata
 except:
+    # 使用 sdk 进行测试时可能需要先登陆
     import jqdatasdk
-    # 使用 sdk 进行测试时需要先登陆
-    # jqdatasdk.auth("ACCOUNT", "PASSWORD")
 
 
 def test_preprocess():

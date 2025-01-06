@@ -8,7 +8,7 @@ from functools import partial
 import pyarrow.feather as feather
 
 from .when import date2str, convert_date, today, now, Time, Date
-from .factor_cache import save_factor_valeus_by_group, get_factor_values_by_cache, get_cache_dir
+from .factor_cache import save_factor_values_by_group, get_factor_values_by_cache, get_cache_dir
 
 
 class DataApi(object):
@@ -218,7 +218,7 @@ class DataApi(object):
 
     def _get_cached_price(self, securities, start_date=None, end_date=None, fq=None, overwrite=False):
         """获取缓存价格数据, 缓存文件中存储的数据是为未复权价格和后复权因子"""
-        save_factor_valeus_by_group(start_date, end_date,
+        save_factor_values_by_group(start_date, end_date,
                                     factor_names='prices',
                                     overwrite=overwrite,
                                     show_progress=self.show_progress)
@@ -377,7 +377,7 @@ class DataApi(object):
         if self.allow_cache and len(trade_days) > 5:
             if self.mkt_cache_api == 'factor':
                 desc = 'check/save cap cache :' if self.show_progress else False
-                cache_dir = save_factor_valeus_by_group(start_date,
+                cache_dir = save_factor_values_by_group(start_date,
                                                         end_date,
                                                         factor_names=['market_cap', 'circulating_market_cap'],
                                                         group_name='mkt_cap',

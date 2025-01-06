@@ -2,9 +2,10 @@
 
 from .version import __version__
 from .analyze import FactorAnalyzer
+from .attribution import AttributionAnalysis
 from .data import DataApi
 from .preprocess import winsorize, winsorize_med, standardlize, neutralize
-from .factor_cache import save_factor_valeus_by_group, get_factor_values_by_cache, get_cache_dir
+from .factor_cache import save_factor_values_by_group, get_factor_values_by_cache, get_cache_dir
 
 
 def analyze_factor(
@@ -45,3 +46,25 @@ def analyze_factor(
                           periods=periods,
                           max_loss=max_loss,
                           **dataapi.apis)
+
+
+def attribution_analysis(
+    weights, daily_return, style_type='style_pro', industry='sw_l1',
+    use_cn=True, show_data_progress=True
+):
+    """归因分析
+
+    用户需要提供的数据:
+    1. 日度股票持仓权重 (加总不为 1 的剩余部分视为现金)
+    2. 组合的的日度收益率 (使用 T 日持仓盘后的因子暴露与 T+1 日的收益进行归因分析)
+
+    组合风格因子暴露 (含行业, country) = sum(组合权重 * 个股因子值), country 暴露为总的股票持仓权重
+    组合风格收益率 (含行业, country) = sum(组合风格因子暴露 * factor_return)
+    组合特异收益率 = 组合总收益率 - 组合风格收益率(含行业, country 或 cash)
+    """
+    return AttributionAnalysis(weights,
+                               daily_return=daily_return,
+                               style_type=style_type,
+                               industry=industry,
+                               use_cn=use_cn,
+                               show_data_progress=show_data_progress)

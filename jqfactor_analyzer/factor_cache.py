@@ -44,6 +44,15 @@ def set_cache_dir(path):
     return cfg
 
 
+def get_factor_values(securities, factors=None, start_date=None, end_date=None, count=None):
+    if api_name == 'jqdatasdk':
+        func = api.get_factor_values
+    else:
+        from jqfactor import get_factor_values
+        func = get_factor_values
+    return func(securities, factors, start_date, end_date, count)
+
+
 @functools.lru_cache()
 def get_cache_dir():
     # 优先获取用户配置的缓存目录, 若无, 则使用默认目录
@@ -107,6 +116,8 @@ def save_data_by_month(factor_names, start, end, month_path):
     start = pd.to_datetime(start)
     end = pd.to_datetime(end)
     security_info = api.get_all_securities()
+    security_info.start_date = pd.to_datetime(security_info.start_date)
+    security_info.end_date = pd.to_datetime(security_info.end_date)
 
     month_value = {}
     stocks = security_info[(security_info.start_date <= end) & (
@@ -123,10 +134,10 @@ def save_data_by_month(factor_names, start, end, month_path):
             'open', 'close']].div(month_value['factor'], axis=0)
     else:
         for factor in factor_names:
-            month_value.update(api.get_factor_values(stocks,
-                                                     start_date=start,
-                                                     end_date=end,
-                                                     factors=factor))
+            month_value.update(get_factor_values(stocks,
+                                                 start_date=start,
+                                                 end_date=end,
+                                                 factors=factor))
         if not month_value:
             return 0
         month_value = pd.concat(month_value).unstack(level=1).T
@@ -144,7 +155,7 @@ def save_data_by_month(factor_names, start, end, month_path):
     return month_value
 
 
-def save_factor_valeus_by_group(start_date, end_date,
+def save_factor_values_by_group(start_date, end_date,
                                 factor_names='prices', group_name=None,
                                 overwrite=False, cache_dir=None, show_progress=True):
     """将因子库数据按因子组储存到本地
@@ -160,7 +171,7 @@ def save_factor_valeus_by_group(start_date, end_date,
     start_date = pd.to_datetime(start_date).date()
     last_day = today() - TimeDelta(days=1) if now().hour > 8 else today() - TimeDelta(days=2)
     end_date = min(pd.to_datetime(end_date).date(), last_day)
-    date_range = pd.date_range(start_date, end_date, freq='1m')
+    date_range = pd.date_range(start_date, end_date, freq='1M')
     _date = pd.to_datetime(end_date)
     if len(date_range) == 0 or date_range[-1] < _date:
         date_range = date_range.append(pd.Index([_date]))
@@ -196,11 +207,16 @@ def save_factor_valeus_by_group(start_date, end_date,
     return root_path
 
 
-def get_factor_values_by_cache(date, codes=None, factor_names=None, factor_path=None):
+def get_factor_values_by_cache(date, codes=None, factor_names=None, group_name=None, factor_path=None):
     """从缓存的文件读取因子数据, 文件不存在时返回空的 DataFrame"""
     date = pd.to_datetime(date)
     if factor_path:
         path = os.path.join(factor_path,
+                            date.strftime("%Y%m"),
+                            date.strftime("%Y%m%d") + ".feather")
+    elif group_name:
+        path = os.path.join(get_cache_dir(),
+                            group_name,
                             date.strftime("%Y%m"),
                             date.strftime("%Y%m%d") + ".feather")
     elif factor_names:
@@ -209,7 +225,7 @@ def get_factor_values_by_cache(date, codes=None, factor_names=None, factor_path=
                             date.strftime("%Y%m"),
                             date.strftime("%Y%m%d") + ".feather")
     else:
-        raise ValueError("factor_names 和 factor_path 至少指定其中一个")
+        raise ValueError("factor_names, factor_path 和 group_name 至少指定其中一个")
     # 数据未产生, 或者已经生产了但是全为 nan
     if not os.path.exists(path):
         factor_names = factor_names if factor_names != 'prices' else [
