@@ -155,19 +155,6 @@ class DataApi(object):
         if self._api_name != 'jqdatasdk':
             self.allow_cache = False
         self.allow_industry_cache = False
-        if self.allow_cache:
-            if not self._api.is_auth():
-                raise Exception("Please run jqdatasdk.auth first")
-            privilege = self._api.get_privilege()
-            if 'GET_HISTORY_INDUSTRY' in privilege:
-                self.allow_industry_cache = True
-            else:
-                self.allow_industry_cache = False
-
-            if 'FACTOR_BASICS' in privilege or 'GET_FACTOR_VALUES' in privilege:
-                self.mkt_cache_api = 'factor'
-            else:
-                self.mkt_cache_api = 'valuation'
 
     def auth(self, username='', password=''):
         if self._api_name == 'jqdata':
@@ -180,6 +167,18 @@ class DataApi(object):
     def api(self):
         if not hasattr(self, "_api"):
             raise NotImplementedError('api not specified')
+        if self.allow_cache:
+            if not self._api.is_auth():
+                raise Exception("Please run jqdatasdk.auth first")
+            privilege = self._api.get_privilege()
+            if 'GET_HISTORY_INDUSTRY' in privilege:
+                self.allow_industry_cache = True
+            else:
+                self.allow_industry_cache = False
+            if 'FACTOR_BASICS' in privilege or 'GET_FACTOR_VALUES' in privilege:
+                self.mkt_cache_api = 'factor'
+            else:
+                self.mkt_cache_api = 'valuation'
         return self._api
 
     @lru_cache(2)

@@ -226,7 +226,7 @@ plot_exposure_and_returns(factors='style',index_symbol=None,show_factor_perf=Fal
 #### (4) 关闭中文图例显示
 
 ```python
-plot_exposure_and_returns()
+plot_disable_chinese_label()
 ```
 
  画图时默认会从系统中查找中文字体显示以中文图例
