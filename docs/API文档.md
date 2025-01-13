@@ -217,7 +217,7 @@ plot_exposure_and_returns(factors='style',index_symbol=None,show_factor_perf=Fal
 
 **参数**
 
--  factors : 绘制的暴露类型 , 可选 'style'(所有风格因子) , 'industry'(所有行业因子),也可以传递一个list,list为exposure_portfolio中columns的一个或者多个
+-  factors : 绘制的暴露类型 , 可选 'style'(所有风格因子) , 'industry'(所有行业因子,也可以传递一个list,list为exposure_portfolio中columns的一个或者多个
   当指定index_symbol时,country会用现金相对于指数的收益替代)
 - index_symbol : 基准指数代码,指定时绘制相对于指数的暴露及收益 , 默认None为组合本身的暴露和收益
 - show_factor_perf : 是否同时绘制因子表现
