@@ -26,24 +26,23 @@ jqfactor_analyzer 是提供给用户配合 jqdatasdk 进行归因分析，因子
 (4) 特异收益，即无法被多因子风险模型解释的部分，也就是影响个股收益的特殊因素，如公司经营能力、决策等。
 
 根据上述多因子风险模型，股票的收益可以表达为 :
+
 $$
-R_i =  \underbrace{1 \cdot f_c}_{\text{国家因子收益}}  + \underbrace{\sum_{j=1}^{S} f_j^{style} \cdot X_{ij}^{style}}_{\text{风格因子收益}} +  \underbrace{\sum_{j=1}^{I} f_j^{industry} \cdot X_{ij}^{industry} }_{\text{行业因子收益}} + \underbrace{u_i}_{\text{个股特异收益}}
+R_i = \underbrace{1 \cdot f_c} _{\text{国家因子收益}} + \underbrace{\sum _{j=1}^{S} f _j^{style} \cdot X _{ij}^{style}} _{\text{风格因子收益}} + \underbrace{\sum _{j=1}^{I} f _j^{industry} \cdot X _{ij}^{industry}} _{\text{行业因子收益}} + \underbrace{u _i} _{\text{个股特异收益}}
 $$
-$$
+
 此公式可简化为:
-$$
-$$
-R_i =  \underbrace{\sum_{j=1}^{K} f_j \cdot X_{ij}}_{\text{第 j 个因子 (含国家，风格和行业，总数为 K) 获得的收益}} + \underbrace{u_i}_{\text{个股特异收益}}
-$$
 
-
+$$
+R_i = \underbrace{\sum_{j=1}^{K} f_j \cdot X_{ij}}_{\text{第 j 个因子 (含国家，风格和行业，总数为 K) 获得的收益}} + \underbrace{u_i} _{\text{个股特异收益}}
+$$
 
 其中：
 - $R_i$ 是第 $i$ 只股票的收益
 - $f_c$ 是国家因子的回报率
 - $S$ 和 $I$ 分别是风格和行业因子的数量
-- $f_j^{style}$ 是第 $j$ 个风格因子的回报率，$f_j^{industry}$ 是第 $j$ 个行业因子的回报率
-- $X_{ij}^{style}$ 是第 $i$ 只股票在第 $j$ 个风格因子上的暴露，$X_{ij}^{industry}$ 是第 $i$ 只股票在第 $j$ 个行业因子上的暴露，因子暴露又称因子载荷/因子值 (通过<span style="color:red;">`jqdatasdk.get_factor_values`</span>可获取风格因子暴露及行业暴露哑变量)
+- $f_j^{style}$ 是第 $j$ 个风格因子的回报率, $f_j^{industry}$ 是第 $j$ 个行业因子的回报率
+- $X_{ij}^{style}$ 是第 $i$ 只股票在第 $j$ 个风格因子上的暴露, $X_{ij}^{industry}$ 是第 $i$ 只股票在第 $j$ 个行业因子上的暴露，因子暴露又称因子载荷/因子值 (通过<span style="color:red;">`jqdatasdk.get_factor_values`</span>可获取风格因子暴露及行业暴露哑变量)
 - $u_i$ 是残差项，表示无法通过模型解释的部分 (即特异收益率)
 
 根据上述公式，对市场上的股票 (一般采用中证全指作为股票池) 使用对数市值加权在横截面上进行加权最小二乘回归，可得到 :
@@ -53,25 +52,30 @@ $$
 
 ### 使用上述已提供的数据进行归因分析 :
 现已知你的投资组合 P 由权重 $w_n$ 构成，则投资组合第 j 个因子的暴露可表示为 :
+
 $$
 X^P_j = \sum_{i=1}^{n} w_i X_{ij}
 $$
 
-- $ X^P_j $ 可通过 <span style="color:red;">`jqfactor_analyzer.AttributionAnalysis().exposure_portfolio` </span>获取
+- $X^P_j$ 可通过 <span style="color:red;">`jqfactor_analyzer.AttributionAnalysis().exposure_portfolio` </span>获取
 
 
 投资组合在第 j 个因子上获取到的收益率可以表示为 :
+
 $$
 R^P_j = X^P_j \cdot f_j
 $$
 
-- $ R^P_j $ 可通过 <span style="color:red;">`jqfactor_analyzer.AttributionAnalysis().attr_daily_return` </span>获取
+- $R^P_j$ 可通过 <span style="color:red;">`jqfactor_analyzer.AttributionAnalysis().attr_daily_return` </span>获取
 
 所以投资组合的收益率也可以被表示为 :
+
 $$
 R_P = \sum_{j=1}^{k} R^p_j \cdot f_j + \sum_{i-1}^{n} w_i u_i
 $$
-即理论上  $ \sum_n w_n u_n $  就是投资组合的特异收益 (alpha) $R_s$ (您也可以直接获取个股特异收益率与权重相乘直接进行计算)，但现实中受到仓位，调仓时间，费用等其他因素的影响，此公式并非完全成立的，AttributionAnalysis 中是使用做差的方式来计算特异收益率，即:
+
+即理论上 $\sum_n w_n u_n$  就是投资组合的特异收益 (alpha) $R_s$ (您也可以直接获取个股特异收益率与权重相乘直接进行计算)，但现实中受到仓位，调仓时间，费用等其他因素的影响，此公式并非完全成立的，AttributionAnalysis 中是使用做差的方式来计算特异收益率，即:
+
 $$
 R_s = R_P - \sum_{j=1}^{k} R^p_j \cdot f_j
 $$
@@ -80,6 +84,7 @@ $$
 - jqdatasdk 已经根据指数权重计算好了指数的风格暴露 $X^B$，可通过<span style="color:red;">`jqdatasdk.get_index_style_exposure`</span> 获取
 
 投资组合 P 相对于指数的第 j 个因子的暴露可表示为 :
+
 $$
 X^{P2B}_j = X^P_j -  X^B_j
 $$
@@ -87,26 +92,31 @@ $$
 - $X^{P2B}_j$ 可通过<span style="color:red;"> `jqfactor_analyzer.AttributionAnalysis().get_exposure2bench(index_symbol)` </span>获取
 
 投资组合在第 j 个因子上相对于指数获取到的收益率可以表示为 :
+
 $$
 R^{P2B}_j =  R^P_j  -  R^B_j = X^P_j \cdot f_j  - X^B_j \cdot f_j  = f_j \cdot X^{P2B}_j
 $$
+
 在 AttributionAnalysis 中，风格及行业因子部分，将指数的仓位和持仓的仓位进行了对齐；同时考虑了现金产生的收益 (国家因子在仓位对齐后不会产生暴露收益，现金收益为 0，现金相对于指数的收益即为：(-1) × 剩余仓位 × 指数收益)
 
 所以投资组合相对于指数的收益可以被表示为:
+
 $$
 R_{P2B} = \sum_{j=1}^{k}  R^{P2B}_j  + R^{P2B}_s + 现金相对于指数的收益
 $$
 
-- $ R_{P2B} $ 等可通过 <span style="color:red;">`jqfactor_analyzer.AttributionAnalysis().get_attr_daily_returns2bench(index_symbol)` </span>获取
+- $R_{P2B}$ 等可通过 <span style="color:red;">`jqfactor_analyzer.AttributionAnalysis().get_attr_daily_returns2bench(index_symbol)` </span>获取
 
 ### 累积收益的处理
 上述 `attr_daily_return` 和  `get_attr_daily_returns2bench(index_symbol)` 获取到的均为单日收益率，在计算累积收益时需要考虑复利影响。
+
 $$
 N_t =  \prod_{t=1}^{n} (R^p_t+1)
 $$
 $$
 Rcum^p_{jt}  = N_{t-1} \cdot R^P_{jt}
 $$
+
 其中 :
 
 - $N_t$ 为投资组合在第 t 天盘后的净值
